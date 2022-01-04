@@ -1,8 +1,10 @@
 # coding: utf-8
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import Enum
-from typing import ClassVar
+from typing import ClassVar, List
+from datetime import datetime
+
 
 @dataclass
 class Address:
@@ -22,12 +24,12 @@ class Guest:
     social_number: str
     birthdate: str
     address: Address
-    credit_card_number: str
 
 
 @dataclass
 class Service:
     id: str
+
 
 class RoomRentalType(str, Enum):
     PRESIDENTIAL = 'presidential'
@@ -38,6 +40,7 @@ class RoomRentalType(str, Enum):
     EXECUTIVE_DOUBLE = 'executive_double'
     EXECUTIVE_TRIPLE = 'executive_triple'
 
+
 @dataclass
 class RoomRental(Service):
     rental_type: RoomRentalType
@@ -45,9 +48,11 @@ class RoomRental(Service):
     days: int
     SERVICE_TYPE: str = 'room_rental'
 
+
 class CarRentalType(str, Enum):
     LUXURY = 'luxury'
     EXECUTIVE = 'executive'
+
 
 @dataclass
 class CarRental(Service):
@@ -65,14 +70,27 @@ class Babysitter(Service):
     extra_hours: int
     SERVICE_TYPE: str = 'babysitter'
 
+
 @dataclass
 class Meal(Service):
     value: float
     description: str    
     SERVICE_TYPE: str = 'meal'
 
+
 @dataclass
 class ExtraService(Service):
     value: float
     description: str
     SERVICE_TYPE: str = 'extra_service'
+
+
+@dataclass
+class Contract(Service):
+    id: str
+    guest: Guest
+    card_number: str
+    checkin_date: datetime
+    days_contracted: int
+    services: List[Service] = field(default_factory=list)
+    is_open: bool = True
