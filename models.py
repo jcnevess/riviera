@@ -271,9 +271,9 @@ class Contract:
     card_number: str
     checkin_date: datetime
     days_contracted: int
+    billing_strategy: BillingStrategy = BillingStrategy()
     services: List[Service] = field(default_factory=list)
     is_open: bool = True
-    billing_strategy: BillingStrategy = BillingStrategy()
 
     def to_json(self):
         return {

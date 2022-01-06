@@ -12,14 +12,52 @@ class Storage:
     services: List[Service] = []
     contracts: List[Contract] = []
 
+    ''' Helper methods '''
+
+    @staticmethod
+    def __get_room_rental_type(rental_type: str):
+        if rental_type == 'presidential':
+            return RoomRentalType.PRESIDENTIAL
+        elif rental_type == 'luxury_simple':
+            return RoomRentalType.LUXURY_SIMPLE
+        elif rental_type == 'luxury_double':
+            return RoomRentalType.LUXURY_DOUBLE
+        elif rental_type == 'luxury_triple':
+            return RoomRentalType.LUXURY_TRIPLE
+        elif rental_type == 'executive_simple':
+            return RoomRentalType.EXECUTIVE_SIMPLE
+        elif rental_type == 'executive_double':
+            return RoomRentalType.EXECUTIVE_DOUBLE
+        elif rental_type == 'executive_triple':
+            return RoomRentalType.EXECUTIVE_TRIPLE
+
+    @staticmethod
+    def __get_car_rental_type(rental_type: str):
+        if rental_type == 'luxury':
+            return CarRentalType.LUXURY
+        elif rental_type == 'executive':
+            return CarRentalType.EXECUTIVE
+
+    @staticmethod
+    def __get_billing_strategy(billing_strategy: str):
+        if billing_strategy == 'holiday_season':
+            return HolidaySeasonStrategy()
+        elif billing_strategy == 'june_season':
+            return JuneSeasonStrategy()
+        elif billing_strategy == 'june_high_season':
+            return JuneHighSeasonStrategy()
+        elif billing_strategy == 'low_season':
+            return LowSeasonStrategy()
+        else:
+            return BillingStrategy()
+
     ''' Guest methods. Using SSN as id for now. '''
 
     def guest_getall(self):
         return self.guests
 
-    # TODO: All methods that take id should explain which id they are referring to (id -> guest_id)
-    def guest_getbyid(self, id: str):
-        return list(filter(lambda guest: guest.social_number == id, self.guests))[0]
+    def guest_getbyid(self, guest_id: str):
+        return list(filter(lambda guest: guest.social_number == guest_id, self.guests))[0]
 
     def guest_add(self, name: str, social_number: str, birthdate: str,
                   address_street: str, address_number: str, address_additional_info: str,
@@ -43,35 +81,40 @@ class Storage:
             if guest.social_number == id:
                 self.guests[index] = Guest(name, social_number, birthdate, address)
 
+    ''' Contract methods '''
+
+    def contract_getall(self):
+        return self.contracts
+
+    def contract_getbyid(self, contract_id: str):
+        return list(filter(lambda contract: contract.id == contract_id, self.contracts))[0]
+
+    def contract_add(self, guest_id: str, card_number: str, checkin_date: str, days_contracted: int, billing_strategy: str):
+        id = uuid.uuid4().hex
+        guest = self.guest_getbyid(guest_id)
+        date = datetime.fromisoformat(checkin_date)
+        bill_strategy = self.__get_billing_strategy(billing_strategy)
+        self.contracts.append(Contract(id, guest, card_number, date, days_contracted, billing_strategy=bill_strategy))
+        return id
+
+    def contract_edit(self, contract_id: str, guest_id: str, card_number: str, checkin_date: str, days_contracted: int, is_open: bool):
+        guest = self.guest_getbyid(guest_id)
+        date = datetime.fromisoformat(checkin_date)
+
+        for (index, contract) in enumerate(self.contracts):
+            if contract.id == contract_id:
+                self.contracts[index] = Contract(contract_id, guest, card_number, date, days_contracted, contract.services, is_open=is_open)
+
+    def contract_delete(self, contract_id: str):
+        self.contracts = list(filter(lambda contract: contract.id != contract_id, self.contracts))
+
     ''' Service methods '''
 
-    def __get_room_rental_type(self, rental_type: str):
-        if rental_type == 'presidential':
-            return RoomRentalType.PRESIDENTIAL
-        elif rental_type == 'luxury_simple':
-            return RoomRentalType.LUXURY_SIMPLE
-        elif rental_type == 'luxury_double':
-            return RoomRentalType.LUXURY_DOUBLE
-        elif rental_type == 'luxury_triple':
-            return RoomRentalType.LUXURY_TRIPLE
-        elif rental_type == 'executive_simple':
-            return RoomRentalType.EXECUTIVE_SIMPLE
-        elif rental_type == 'executive_double':
-            return RoomRentalType.EXECUTIVE_DOUBLE
-        elif rental_type == 'executive_triple':
-            return RoomRentalType.EXECUTIVE_TRIPLE
+    def service_getall(self, contract_id: str):
+        return [service for contract in self.contracts if contract.id == contract_id for service in contract.services]
 
-    def __get_car_rental_type(self, rental_type: str):
-        if rental_type == 'luxury':
-            return CarRentalType.LUXURY
-        elif rental_type == 'executive':
-            return CarRentalType.EXECUTIVE
-
-    def service_getall(self):
-        return [service for contract in self.contracts for service in contract.services]
-
-    def service_getbyid(self, id: str):
-        return list(filter(lambda service: service.id == id, self.service_getall()))[0]
+    def service_getbyid(self, contract_id: str, service_id: str):
+        return [service for contract in self.contracts if contract.id == contract_id for service in contract.services if service.id == service_id][0]
 
     def service_add_room(self, contract_id: str, rental_type: str, additional_bed: bool, days: int):
         id = uuid.uuid4().hex
@@ -110,87 +153,45 @@ class Storage:
                 contract.services.append(ExtraService(id, value, description))
         return id
 
-    def service_edit_room(self, id: str, contract_id: str, rental_type: str, additional_bed: bool, days: int):
+    def service_edit_room(self, contract_id: str, service_id: str, rental_type: str, additional_bed: bool, days: int):
         room_rental_type = self.__get_room_rental_type(rental_type)
         for contract in self.contracts:
             if contract.id == contract_id:
                 for (index, service) in enumerate(contract.services):
-                    if service.id == id:
-                        contract.services[index] = RoomRental(id, room_rental_type, additional_bed, days)
+                    if service.id == service_id:
+                        contract.services[index] = RoomRental(service_id, room_rental_type, additional_bed, days)
 
-    def service_edit_car(self, id: str, contract_id: str, rental_type: str, car_plate: str, full_gas: bool, car_insurance: bool,
+    def service_edit_car(self, contract_id: str, service_id: str, rental_type: str, car_plate: str, full_gas: bool, car_insurance: bool,
                          days: int):
         car_rental_type = self.__get_car_rental_type(rental_type)
         for contract in self.contracts:
             if contract.id == contract_id:
                 for (index, service) in enumerate(contract.services):
-                    if service.id == id:
-                        contract.services[index] = CarRental(id, car_rental_type, car_plate, full_gas, car_insurance, days)
+                    if service.id == service_id:
+                        contract.services[index] = CarRental(service_id, car_rental_type, car_plate, full_gas, car_insurance, days)
 
-    def service_edit_babysitter(self, id: str, contract_id: str, normal_hours: int, extra_hours: int):
+    def service_edit_babysitter(self, contract_id: str, service_id: str, normal_hours: int, extra_hours: int):
         for contract in self.contracts:
             if contract.id == contract_id:
                 for (index, service) in enumerate(contract.services):
-                    if service.id == id:
-                        contract.services[index] = Babysitter(id, normal_hours, extra_hours)
+                    if service.id == service_id:
+                        contract.services[index] = Babysitter(service_id, normal_hours, extra_hours)
 
-    def service_edit_meal(self, id: str, contract_id: str, value: float, description: str):
+    def service_edit_meal(self, contract_id: str, service_id: str, value: float, description: str):
         for contract in self.contracts:
             if contract.id == contract_id:
                 for (index, service) in enumerate(contract.services):
-                    if service.id == id:
-                        contract.services[index] = Meal(id, value, description)
+                    if service.id == service_id:
+                        contract.services[index] = Meal(service_id, value, description)
 
-    def service_edit_extra(self, id: str, contract_id: str, value: float, description: str):
+    def service_edit_extra(self, contract_id: str, service_id: str, value: float, description: str):
         for contract in self.contracts:
             if contract.id == contract_id:
                 for (index, service) in enumerate(contract.services):
-                    if service.id == id:
-                        contract.services[index] = ExtraService(id, value, description)
+                    if service.id == service_id:
+                        contract.services[index] = ExtraService(service_id, value, description)
 
-    def service_delete(self, id: str):
+    def service_delete(self, contract_id: str, service_id: str):
         for contract in self.contracts:
-            contract.services = list(filter(lambda service: service.id != id, contract.services))
-
-    # def service_get_price(self, service_id: str):
-    #     service = None
-    #     index = 0
-    #
-    #     while not service:
-    #         contract = self.contracts[index]
-    #         for serv in contract.services:
-    #             if serv.id == service_id:
-    #                 service = serv
-    #                 break
-    #         index += 1
-    #
-    #     if service:
-    #         return service.get_price()
-    #     else:
-    #         return 0.0  # TODO: This should be an exception
-
-    ''' Contract methods '''
-
-    def contract_getall(self):
-        return self.contracts
-
-    def contract_getbyid(self, id: str):
-        return list(filter(lambda contract: contract.id == id, self.contracts))[0]
-
-    def contract_add(self, guest_id: str, card_number: str, checkin_date: str, days_contracted: int):
-        id = uuid.uuid4().hex
-        guest = self.guest_getbyid(guest_id)
-        date = datetime.fromisoformat(checkin_date)
-        self.contracts.append(Contract(id, guest, card_number, date, days_contracted))
-        return id
-
-    def contract_edit(self, id: str, guest_id: str, card_number: str, checkin_date: str, days_contracted: int, is_open: bool):
-        guest = self.guest_getbyid(guest_id)
-        date = datetime.fromisoformat(checkin_date)
-
-        for (index, contract) in enumerate(self.contracts):
-            if contract.id == id:
-                self.contracts[index] = Contract(id, guest, card_number, date, days_contracted, contract.services, is_open)
-
-    def contract_delete(self, id: str):
-        self.contracts = list(filter(lambda contract: contract.id != id, self.contracts))
+            if contract.id == contract_id:
+                contract.services = list(filter(lambda service: service.id != service_id, contract.services))
