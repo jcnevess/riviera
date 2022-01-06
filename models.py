@@ -44,9 +44,6 @@ class Service:
     def get_price(self):
         return 0.0
 
-    # def get_billing_details(self):
-    #     return ''
-
     def to_json(self):
         pass
 
@@ -84,21 +81,15 @@ class RoomRental(Service):
 
         return total_value
 
-    # def get_billing_details(self):
-    #     billing_details = self.SERVICE_TYPE.replace('_', ' ').title() + '\n'
-    #     billing_details += 'Room type: ' + str(self.rental_type.value).replace('_', ' ').title() + ' $' + str(self.__price[self.rental_type]) + '\n'
-    #     billing_details += 'Days: ' + str(self.days) + '\n'
-    #     billing_details += 'Subtotal: ' + str(self.get_price()) + '\n'
-    #
-    #     return billing_details
-
     def to_json(self):
         return {
             'id': self.id,
             'service_type': self.SERVICE_TYPE,
             'rental_type': self.rental_type.value,
+            'daily_price': self.__price[self.rental_type],
+            'days': self.days,
             'additional_bed': self.additional_bed,
-            'days': self.days
+            'service_price': self.get_price()
         }
 
 
@@ -139,28 +130,17 @@ class CarRental(Service):
 
         return total_value
 
-    # def get_billing_details(self):
-    #     billing_details = self.SERVICE_TYPE.replace('_', ' ').title() + '\n'
-    #     billing_details += 'Car type: ' + str(self.rental_type.value).replace('_', ' ').title() + ' $' + str(self.__price[self.rental_type]) + '\n'
-    #     billing_details += 'Days: ' + str(self.days) + '\n'
-    #
-    #     if self.full_gas:
-    #         billing_details += 'Full gas fee: ' + str(CarRental.__FULL_GAS_FEE) + '\n'
-    #
-    #     if self.car_insurance:
-    #         billing_details += 'Insurance fee: ' + str(CarRental.__INSURANCE_FEE) + '\n'
-    #
-    #     billing_details += 'Subtotal: ' + str(self.get_price()) + '\n'
-
     def to_json(self):
         return {
             'id': self.id,
             'service_type': self.SERVICE_TYPE,
             'rental_type': self.rental_type.value,
+            'daily_price': self.__price[self.rental_type],
             'days': self.days,
             'car_plate': self.car_plate,
             'full_gas': self.full_gas,
-            'car_insurance': self.car_insurance
+            'car_insurance': self.car_insurance,
+            'service_price': self.get_price()
         }
 
 
@@ -179,20 +159,15 @@ class Babysitter(Service):
         total_value += self.extra_hours * Babysitter.__EXTRA_PRICE
         return total_value
 
-    # def get_billing_details(self):
-    #     billing_details = self.SERVICE_TYPE.replace('_', ' ').title() + '\n'
-    #     billing_details += 'Normal hours ($' + str(self.__NORMAL_PRICE) + '): ' + str(self.normal_hours)
-    #     billing_details += 'Extra hours ($' + str(self.__EXTRA_PRICE) + '): ' + str(self.extra_hours)
-    #     billing_details += 'Subtotal: ' + str(self.get_price())
-    #
-    #     return billing_details
-
     def to_json(self):
         return {
             'id': self.id,
             'service_type': self.SERVICE_TYPE,
             'normal_hours': self.normal_hours,
-            'extra_hours': self.extra_hours
+            'hourly_price': self.__NORMAL_PRICE,
+            'extra_hours': self.extra_hours,
+            'hourly_price_extra': self.__EXTRA_PRICE,
+            'service_price': self.get_price()
         }
 
 
@@ -205,17 +180,13 @@ class Meal(Service):
     def get_price(self):
         return self.value
 
-    # def get_billing_details(self):
-    #     billing_details = self.SERVICE_TYPE.replace('_', ' ').title() + '\n'
-    #     billing_details += 'Description: ' + self.description
-    #     billing_details += 'Subtotal: ' + str(self.value)
-
     def to_json(self):
         return {
             'id': self.id,
             'service_type': self.SERVICE_TYPE,
             'description': self.description,
-            'value': self.value
+            'value': self.value,
+            'service_price': self.get_price()
         }
 
 
@@ -228,17 +199,13 @@ class ExtraService(Service):
     def get_price(self):
         return self.value
 
-    # def get_billing_details(self):
-    #     billing_details = self.SERVICE_TYPE.replace('_', ' ').title() + '\n'
-    #     billing_details += 'Description: ' + self.description
-    #     billing_details += 'Subtotal: ' + str(self.value)
-
     def to_json(self):
         return {
             'id': self.id,
             'service_type': self.SERVICE_TYPE,
             'description': self.description,
-            'value': self.value
+            'value': self.value,
+            'service_price': self.get_price()
         }
 
 
@@ -250,73 +217,51 @@ class BillingStrategy:
 
         return bill_value
 
-    # def get_billing_details(self, services: List[Service]):
-    #     billing_details = 'Riviera Hotel\n'
-    #     billing_details += 'Billing details: \n'
-    #
-    #     for service in services:
-    #         billing_details += service.get_billing_details()
-    #         billing_details += '------------\n'
-    #
-    #     billing_details += 'Base price: ' + str(self.get_base_bill(services)) + '\n'
-    #
-    #     return billing_details
+    def get_multiplier(self):
+        return 1.0
+
+    def get_final_bill(self, services: List[Service]):
+        return self.get_base_bill(services) * self.get_multiplier()
 
 
 class HolidaySeasonStrategy(BillingStrategy):
     __MULTIPLIER = 1.2
 
-    def get_bill(self, services: List[Service]):
-        return super().get_base_bill(services) * HolidaySeasonStrategy.__MULTIPLIER
+    def get_multiplier(self):
+        return self.__MULTIPLIER
 
-    # def get_billing_details(self, services: List[Service]):
-    #     billing_details = super().get_billing_details(services)
-    #     billing_details += 'Season multiplier: ' + str(HolidaySeasonStrategy.__MULTIPLIER) + '\n'
-    #     billing_details += 'Final price: ' + str(self.get_bill(services)) + '\n'
-    #
-    #     return billing_details
+    def get_final_bill(self, services: List[Service]):
+        return super().get_base_bill(services) * self.get_multiplier()
 
 
 class JuneSeasonStrategy(BillingStrategy):
     __MULTIPLIER = 1.1
 
-    def get_bill(self, services: List[Service]):
-        return super().get_base_bill(services) * JuneSeasonStrategy.__MULTIPLIER
+    def get_multiplier(self):
+        return self.__MULTIPLIER
 
-    # def get_billing_details(self, services: List[Service]):
-    #     billing_details = super().get_billing_details(services)
-    #     billing_details += 'Season multiplier: ' + str(JuneSeasonStrategy.__MULTIPLIER) + '\n'
-    #     billing_details += 'Final price: ' + str(self.get_bill(services)) + '\n'
-    #
-    #     return billing_details
+    def get_final_bill(self, services: List[Service]):
+        return super().get_base_bill(services) * self.get_multiplier()
 
 
 class JuneHighSeasonStrategy(BillingStrategy):
     __MULTIPLIER = 1.5
 
-    def get_bill(self, services: List[Service]):
-        return super().get_base_bill(services) * JuneHighSeasonStrategy.__MULTIPLIER
+    def get_multiplier(self):
+        return self.__MULTIPLIER
 
-    # def get_billing_details(self, services: List[Service]):
-    #     billing_details = super().get_billing_details(services)
-    #     billing_details += 'Season multiplier: ' + str(JuneHighSeasonStrategy.__MULTIPLIER) + '\n'
-    #     billing_details += 'Final price: ' + str(self.get_bill(services)) + '\n'
-    #
-    #     return billing_details
+    def get_final_bill(self, services: List[Service]):
+        return super().get_base_bill(services) * self.get_multiplier()
 
 
 class LowSeasonStrategy(BillingStrategy):
     __MULTIPLIER = 0.8
 
-    def get_bill(self, services: List[Service]):
-        return super().get_base_bill(services) * LowSeasonStrategy.__MULTIPLIER
+    def get_multiplier(self):
+        return self.__MULTIPLIER
 
-    # def get_billing_details(self, services: List[Service]):
-    #     billing_details = super().get_billing_details(services)
-    #     billing_details += 'Season multiplier: ' + str(LowSeasonStrategy.__MULTIPLIER) + '\n'
-    #     billing_details += 'Final price: ' + str(self.get_bill(services)) + '\n'
-    #
-    #     return billing_details
+    def get_final_bill(self, services: List[Service]):
+        return super().get_base_bill(services) * self.get_multiplier()
 
 
 @dataclass
@@ -330,9 +275,6 @@ class Contract:
     is_open: bool = True
     billing_strategy: BillingStrategy = BillingStrategy()
 
-    # def get_detailed_bill(self):
-    #     return self.billing_strategy.get_billing_details(self.services)
-
     def to_json(self):
         return {
             'id': self.id,
@@ -341,5 +283,8 @@ class Contract:
             'checkin_date': self.checkin_date,
             'days_contracted': self.days_contracted,
             'is_open': self.is_open,
-            'services': list(map(lambda s: s.to_json(), self.services))
+            'services': list(map(lambda s: s.to_json(), self.services)),
+            'services_price': self.billing_strategy.get_base_bill(self.services),
+            'price_multiplier': self.billing_strategy.get_multiplier(),
+            'total_price': self.billing_strategy.get_final_bill(self.services)
         }
