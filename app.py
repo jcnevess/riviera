@@ -8,10 +8,11 @@ app = Flask(__name__)
 storage = Storage()
 
 
+# TODO: Routes should be in the plural
 @app.route('/guest', methods=['GET', 'POST'])
 def guest():
     if request.method == 'GET':
-        return jsonify(storage.guest_getall())
+        return jsonify(list(map(lambda i: i.to_json(), storage.guest_getall())))
     elif request.method == 'POST':
         form = request.form
         storage.guest_add(form['name'], form['social_number'], form['birthdate'], form['address_street'], form['address_number'],
@@ -27,7 +28,7 @@ def guest():
 @app.route('/guest/<id>', methods=['GET', 'PUT'])
 def guest_by_id(id):
     if request.method == 'GET':
-        return jsonify(storage.guest_getbyid(id))
+        return jsonify(storage.guest_getbyid(id).to_json())
     elif request.method == 'PUT':
         form = request.form
         storage.guest_edit(id, form['name'], form['social_number'], form['birthdate'], form['address_street'],
@@ -39,10 +40,11 @@ def guest_by_id(id):
         return response
 
 
+# TODO: Service routes should receive their contracts in the url
 @app.route('/service', methods=['GET', 'POST'])
 def service():
     if request.method == 'GET':
-        return jsonify(storage.service_getall())
+        return jsonify(list(map(lambda s: s.to_json(), storage.service_getall())))
     elif request.method == 'POST':
         form = request.form
         service_type = form['service_type']
@@ -68,7 +70,7 @@ def service():
 @app.route('/service/<id>', methods=['GET', 'PUT', 'DELETE'])
 def service_by_id(id):
     if request.method == 'GET':
-        return jsonify(storage.service_getbyid(id))
+        return jsonify(storage.service_getbyid(id).to_json())
 
     elif request.method == 'DELETE':
         storage.service_delete(id)
@@ -93,10 +95,15 @@ def service_by_id(id):
         return make_response('Resource updated', 200)
 
 
+# @app.route('/service/<service_id>/price', methods=['GET'])
+# def service_price(service_id: str):
+#     return storage.service_get_price(service_id)
+
+
 @app.route('/contract', methods=['GET', 'POST'])
 def contract():
     if request.method == 'GET':
-        return jsonify(storage.contract_getall())
+        return jsonify(list(map(lambda c: c.to_json(), storage.contract_getall())))
     elif request.method == 'POST':
         form = request.form
         id = storage.contract_add(form['guest_id'], form['card_number'], form['checkin_date'], form['days_contracted'])
@@ -108,7 +115,7 @@ def contract():
 @app.route('/contract/<id>', methods=['GET', 'PUT', 'DELETE'])
 def contract_by_id(id: str):
     if request.method == 'GET':
-        return jsonify(storage.contract_getbyid(id))
+        return jsonify(storage.contract_getbyid(id).to_json())
     elif request.method == 'PUT':
         form = request.form
         storage.contract_edit(id, form['guest_id'], form['card_number'], form['checkin_date'],

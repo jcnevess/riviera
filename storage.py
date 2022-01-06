@@ -17,6 +17,7 @@ class Storage:
     def guest_getall(self):
         return self.guests
 
+    # TODO: All methods that take id should explain which id they are referring to (id -> guest_id)
     def guest_getbyid(self, id: str):
         return list(filter(lambda guest: guest.social_number == id, self.guests))[0]
 
@@ -150,6 +151,23 @@ class Storage:
     def service_delete(self, id: str):
         for contract in self.contracts:
             contract.services = list(filter(lambda service: service.id != id, contract.services))
+
+    # def service_get_price(self, service_id: str):
+    #     service = None
+    #     index = 0
+    #
+    #     while not service:
+    #         contract = self.contracts[index]
+    #         for serv in contract.services:
+    #             if serv.id == service_id:
+    #                 service = serv
+    #                 break
+    #         index += 1
+    #
+    #     if service:
+    #         return service.get_price()
+    #     else:
+    #         return 0.0  # TODO: This should be an exception
 
     ''' Contract methods '''
 
