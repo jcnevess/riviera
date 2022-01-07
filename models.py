@@ -173,39 +173,39 @@ class Babysitter(Service):
 
 @dataclass
 class Meal(Service):
-    value: float
+    unit_price: float
     description: str    
     SERVICE_TYPE: str = 'meal'
 
     def get_price(self):
-        return self.value
+        return self.unit_price
 
     def to_json(self):
         return {
             'id': self.id,
             'service_type': self.SERVICE_TYPE,
             'description': self.description,
-            'value': self.value,
+            'unit_price': self.unit_price,
             'service_price': self.get_price()
         }
 
 
 @dataclass
 class PenaltyFee(Service):
-    value: float
+    unit_price: float
     description: str
     penalties: int
     SERVICE_TYPE: str = 'penalty_fee'
 
     def get_price(self):
-        return self.value * self.penalties
+        return self.unit_price * self.penalties
 
     def to_json(self):
         return {
             'id': self.id,
             'service_type': self.SERVICE_TYPE,
             'description': self.description,
-            'value': self.value,
+            'unit_price': self.unit_price,
             'penalties': self.penalties,
             'service_price': self.get_price()
         }
@@ -213,19 +213,19 @@ class PenaltyFee(Service):
 
 @dataclass
 class ExtraService(Service):
-    value: float
+    unit_price: float
     description: str
     SERVICE_TYPE: str = 'extra_service'
 
     def get_price(self):
-        return self.value
+        return self.unit_price
 
     def to_json(self):
         return {
             'id': self.id,
             'service_type': self.SERVICE_TYPE,
             'description': self.description,
-            'value': self.value,
+            'unit_price': self.unit_price,
             'service_price': self.get_price()
         }
 

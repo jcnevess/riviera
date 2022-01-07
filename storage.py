@@ -149,25 +149,25 @@ class Storage:
                 contract.services.append(Babysitter(id, normal_hours, extra_hours))
         return id
 
-    def service_add_meal(self, contract_id: str, value: float, description: str):
+    def service_add_meal(self, contract_id: str, unit_price: float, description: str):
         id = uuid.uuid4().hex
         for contract in self.contracts:
             if contract.id == contract_id:
-                contract.services.append(Meal(id, value, description))
+                contract.services.append(Meal(id, unit_price, description))
         return id
 
-    def service_add_penalty_fee(self, contract_id: str, value: float, description: str, penalties: int):
+    def service_add_penalty_fee(self, contract_id: str, unit_price: float, description: str, penalties: int):
         id = uuid.uuid4().hex
         for contract in self.contracts:
             if contract.id == contract_id:
-                contract.services.append(PenaltyFee(id, value, description, penalties))
+                contract.services.append(PenaltyFee(id, unit_price, description, penalties))
         return id
 
-    def service_add_extra(self, contract_id: str, value: float, description: str):
+    def service_add_extra(self, contract_id: str, unit_price: float, description: str):
         id = uuid.uuid4().hex
         for contract in self.contracts:
             if contract.id == contract_id:
-                contract.services.append(ExtraService(id, value, description))
+                contract.services.append(ExtraService(id, unit_price, description))
         return id
 
     def service_edit_room(self, contract_id: str, service_id: str, rental_type: str, additional_bed: bool, days: int):
@@ -194,26 +194,26 @@ class Storage:
                     if service.id == service_id:
                         contract.services[index] = Babysitter(service_id, normal_hours, extra_hours)
 
-    def service_edit_meal(self, contract_id: str, service_id: str, value: float, description: str):
+    def service_edit_meal(self, contract_id: str, service_id: str, unit_price: float, description: str):
         for contract in self.contracts:
             if contract.id == contract_id:
                 for (index, service) in enumerate(contract.services):
                     if service.id == service_id:
-                        contract.services[index] = Meal(service_id, value, description)
+                        contract.services[index] = Meal(service_id, unit_price, description)
 
-    def service_edit_penalty_fee(self, contract_id: str, service_id: str, value: float, description: str, penalties: int):
+    def service_edit_penalty_fee(self, contract_id: str, service_id: str, unit_price: float, description: str, penalties: int):
         for contract in self.contracts:
             if contract.id == contract_id:
                 for (index, service) in enumerate(contract.services):
                     if service.id == service_id:
-                        contract.services[index] = PenaltyFee(service_id, value, description, penalties)
+                        contract.services[index] = PenaltyFee(service_id, unit_price, description, penalties)
 
-    def service_edit_extra(self, contract_id: str, service_id: str, value: float, description: str):
+    def service_edit_extra(self, contract_id: str, service_id: str, unit_price: float, description: str):
         for contract in self.contracts:
             if contract.id == contract_id:
                 for (index, service) in enumerate(contract.services):
                     if service.id == service_id:
-                        contract.services[index] = ExtraService(service_id, value, description)
+                        contract.services[index] = ExtraService(service_id, unit_price, description)
 
     def service_delete(self, contract_id: str, service_id: str):
         for contract in self.contracts:
