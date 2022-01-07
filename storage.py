@@ -3,7 +3,7 @@
 import uuid
 
 from models import *
-from typing import List
+from typing import List, Dict
 from datetime import datetime
 
 
@@ -11,6 +11,16 @@ class Storage:
     guests: List[Guest] = []
     services: List[Service] = []
     contracts: List[Contract] = []
+
+    available_rooms: Dict[RoomRentalType, int] = {
+        RoomRentalType.PRESIDENTIAL: 5,
+        RoomRentalType.LUXURY_SIMPLE: 5,
+        RoomRentalType.LUXURY_DOUBLE: 15,
+        RoomRentalType.LUXURY_TRIPLE: 20,
+        RoomRentalType.EXECUTIVE_SIMPLE: 5,
+        RoomRentalType.EXECUTIVE_DOUBLE: 15,
+        RoomRentalType.EXECUTIVE_TRIPLE: 20
+    }
 
     ''' Helper methods '''
 
@@ -146,6 +156,13 @@ class Storage:
                 contract.services.append(Meal(id, value, description))
         return id
 
+    def service_add_penalty_fee(self, contract_id: str, value: float, description: str, penalties: int):
+        id = uuid.uuid4().hex
+        for contract in self.contracts:
+            if contract.id == contract_id:
+                contract.services.append(PenaltyFee(id, value, description, penalties))
+        return id
+
     def service_add_extra(self, contract_id: str, value: float, description: str):
         id = uuid.uuid4().hex
         for contract in self.contracts:
@@ -184,6 +201,13 @@ class Storage:
                     if service.id == service_id:
                         contract.services[index] = Meal(service_id, value, description)
 
+    def service_edit_penalty_fee(self, contract_id: str, service_id: str, value: float, description: str, penalties: int):
+        for contract in self.contracts:
+            if contract.id == contract_id:
+                for (index, service) in enumerate(contract.services):
+                    if service.id == service_id:
+                        contract.services[index] = PenaltyFee(service_id, value, description, penalties)
+
     def service_edit_extra(self, contract_id: str, service_id: str, value: float, description: str):
         for contract in self.contracts:
             if contract.id == contract_id:
@@ -195,3 +219,14 @@ class Storage:
         for contract in self.contracts:
             if contract.id == contract_id:
                 contract.services = list(filter(lambda service: service.id != service_id, contract.services))
+
+    ''' Room methods '''
+
+    def room_getall(self):
+        return self.available_rooms
+
+    def room_book(self, rental_type: str):
+        self.available_rooms[Storage.__get_room_rental_type(rental_type)] -= 1
+
+    def room_unbook(self, rental_type: str):
+        self.available_rooms[Storage.__get_room_rental_type(rental_type)] += 1

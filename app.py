@@ -84,6 +84,8 @@ def service(contract_id):
             id = storage.service_add_babysitter(contract_id, int(form['normal_hours']), int(form['extra_hours']))
         elif service_type == 'meal':
             id = storage.service_add_meal(contract_id, float(form['value']), form['description'])
+        elif service_type == 'penalty_fee':
+            id = storage.service_add_penalty_fee(contract_id, float(form['value']), form['description'], int(form['penalties']))
         elif service_type == 'extra_service':
             id = storage.service_add_extra(contract_id, float(form['value']), form['description'])
 
@@ -114,7 +116,26 @@ def service_by_id(contract_id, service_id):
             storage.service_edit_babysitter(contract_id, service_id, int(form['normal_hours']), int(form['extra_hours']))
         elif service_type == 'meal':
             storage.service_edit_meal(contract_id, service_id, float(form['value']), form['description'])
+        elif service_type == 'penalty_fee':
+            storage.service_edit_penalty_fee(contract_id, service_id, float(form['value']), form['description'], int(form['penalties']))
         elif service_type == 'extra_service':
             storage.service_edit_extra(contract_id, service_id, float(form['value']), form['description'])
 
         return make_response('Resource updated', 200)
+
+
+@app.route('/rooms', methods=['GET', 'PUT'])
+def room():
+    form = request.form
+
+    if request.method == 'GET':
+        return storage.room_getall()
+
+    elif request.method == 'PUT':
+        action = request.args.get('action')
+        if action == 'book':
+            storage.room_book(form['rental_type'])
+        elif action == 'unbook':
+            storage.room_unbook(form['rental_type'])
+
+    return make_response('Resource updated', 200)

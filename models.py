@@ -191,6 +191,27 @@ class Meal(Service):
 
 
 @dataclass
+class PenaltyFee(Service):
+    value: float
+    description: str
+    penalties: int
+    SERVICE_TYPE: str = 'penalty_fee'
+
+    def get_price(self):
+        return self.value * self.penalties
+
+    def to_json(self):
+        return {
+            'id': self.id,
+            'service_type': self.SERVICE_TYPE,
+            'description': self.description,
+            'value': self.value,
+            'penalties': self.penalties,
+            'service_price': self.get_price()
+        }
+
+
+@dataclass
 class ExtraService(Service):
     value: float
     description: str
