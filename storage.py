@@ -230,3 +230,27 @@ class Storage:
 
     def room_unbook(self, rental_type: str):
         self.available_rooms[Storage.__get_room_rental_type(rental_type)] += 1
+
+    ''' Review methods '''
+
+    def review_get(self, contract_id: str):
+        for contract in self.contracts:
+            if contract.id == contract_id:
+                return contract.review
+
+    def review_add(self, contract_id: str, rating: int, comment: str):
+        id = uuid.uuid4().hex
+        for contract in self.contracts:
+            if contract.id == contract_id:
+                contract.review = Review(id, rating, comment)
+
+    def review_edit(self, contract_id: str, rating: int, comment: str):
+        for contract in self.contracts:
+            if contract.id == contract_id:
+                id = contract.review.id
+                contract.review = Review(id, rating, comment)
+
+    def review_delete(self, contract_id: str):
+        for contract in self.contracts:
+            if contract.id == contract_id:
+                contract.review = None

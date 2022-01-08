@@ -286,15 +286,26 @@ class LowSeasonStrategy(BillingStrategy):
 
 
 @dataclass
+class Review:
+    id: str
+    rating: int
+    comment: str
+
+    def to_json(self):
+        return self.__dict__
+
+
+@dataclass
 class Contract:
     id: str
     guest: Guest
     card_number: str
     checkin_date: datetime
     days_contracted: int
-    billing_strategy: BillingStrategy = BillingStrategy()
     services: List[Service] = field(default_factory=list)
+    billing_strategy: BillingStrategy = BillingStrategy()
     is_open: bool = True
+    review: Review = None
 
     def to_json(self):
         return {
