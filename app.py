@@ -42,7 +42,17 @@ def guest_by_id(guest_id):
 @app.route('/contracts', methods=['GET', 'POST'])
 def contract():
     if request.method == 'GET':
-        return jsonify(list(map(lambda c: c.to_json(), storage.contract_getall())))
+        args = request.args
+        result = storage.contract_getall()
+
+        if args.get('month'):
+            result = filter(lambda c: c.checkin_date.month == int(args.get('month')), result)
+
+        if args.get('open') == 'true':
+            result = filter(lambda c: c.is_open, result)
+
+        return jsonify(list(map(lambda c: c.to_json(), result)))
+
     elif request.method == 'POST':
         form = request.form
         id = storage.contract_add(form['guest_id'], form['card_number'], form['checkin_date'],
@@ -122,6 +132,26 @@ def service_by_id(contract_id, service_id):
             storage.service_edit_extra(contract_id, service_id, float(form['unit_price']), form['description'])
 
         return make_response('Resource updated', 200)
+
+
+@app.route('/contracts/<contract_id>/review', methods=['GET', 'POST', 'PUT', 'DELETE'])
+def review(contract_id):
+    form = request.form
+
+    if request.method == 'GET':
+        rev = storage.review_get(contract_id)
+        return rev.to_json() if rev else {}
+    elif request.method == 'POST':
+        storage.review_add(contract_id, int(form['rating']), form['comment'])
+        response = make_response('Resource created', 201)
+        response.headers['Location'] = url_for('review', contract_id=contract_id)
+        return response
+    elif request.method == 'PUT':
+        storage.review_edit(contract_id, int(form['rating']), form['comment'])
+        return make_response('Resource updated', 200)
+    elif request.method == 'DELETE':
+        storage.review_delete(contract_id)
+        return make_response('Resource deleted', 200)
 
 
 @app.route('/rooms', methods=['GET', 'PUT'])
