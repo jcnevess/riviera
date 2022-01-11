@@ -14,9 +14,9 @@ def guest():
         return jsonify(list(map(lambda i: i.to_json(), storage.guest_getall())))
     elif request.method == 'POST':
         form = request.form
-        storage.guest_add(form['name'], form['social_number'], form['birthdate'], form['address_street'], form['address_number'],
-                          form['address_additional_info'], form['address_neighborhood'], form['address_zipcode'],
-                          form['address_city'], form['address_state'], form['address_country'])
+        storage.guest_add(form['name'], form['social_number'], form['birthdate'], form['phone_number'], form['address_street'],
+                          form['address_number'], form['address_additional_info'], form['address_neighborhood'],
+                          form['address_zipcode'], form['address_city'], form['address_state'], form['address_country'])
 
         response = make_response('Resource Created', 201)
         response.headers['Location'] = url_for('guest_by_id', guest_id=form['social_number'])
@@ -24,13 +24,13 @@ def guest():
 
 
 # using ssn as id for now
-@app.route('/guests/<guest_id>', methods=['GET', 'PUT'])
+@app.route('/guests/<int:guest_id>', methods=['GET', 'PUT'])
 def guest_by_id(guest_id):
     if request.method == 'GET':
         return jsonify(storage.guest_getbyid(guest_id).to_json())
     elif request.method == 'PUT':
         form = request.form
-        storage.guest_edit(guest_id, form['name'], form['social_number'], form['birthdate'], form['address_street'],
+        storage.guest_edit(guest_id, form['name'], form['social_number'], form['birthdate'], form['phone_number'], form['address_street'],
                            form['address_number'], form['address_additional_info'], form['address_neighborhood'],
                            form['address_zipcode'], form['address_city'], form['address_state'], form['address_country'])
 
@@ -46,7 +46,7 @@ def contract():
         result = storage.contract_getall()
 
         if args.get('month'):
-            result = filter(lambda c: c.checkin_date.month == int(args.get('month')), result)
+            result = filter(lambda c: c.checkin_time.month == int(args.get('month')), result)
 
         if args.get('open') == 'true':
             result = filter(lambda c: c.is_open, result)
@@ -159,7 +159,7 @@ def room():
     form = request.form
 
     if request.method == 'GET':
-        return storage.room_getall()
+        return jsonify(storage.room_getall())
 
     elif request.method == 'PUT':
         action = request.args.get('action')
