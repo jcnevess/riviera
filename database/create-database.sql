@@ -68,6 +68,7 @@ create table `product`(
 create table `service`(
     `id` int(64) auto_increment,
     `contract_id` int(64),
+    `service_type` varchar(64),
 
     primary key (`id`),
     foreign key (`contract_id`) references `contract`(`id`)
@@ -135,3 +136,27 @@ create table `penalty_fee`(
     primary key (`service_id`),
     foreign key (`service_id`) references `service`(`id`) on delete cascade
 );
+
+-- inserting default values
+insert into `product`
+    (`name`, `price`, `quantity`)  values
+    ('room_presidential', 1200, 5),
+    ('room_luxury_simple', 520, 5),
+    ('room_luxury_double', 570, 15),
+    ('room_luxury_triple', 620, 20),
+    ('room_executive_simple', 360, 5),
+    ('room_executive_double', 385, 15),
+    ('room_executive_triple', 440, 20),
+    ('car_luxury', 100, -1),
+    ('car_executive', 60, -1),
+    ('car_full_gas', 150, -1),
+    ('car_insurance', 100, -1),
+    ('babysitter', 25, -1);
+
+insert into `contract_billing_strategy`
+    (`name`, `multiplier`) values
+    ('normal_season', 1),
+    ('holiday_season', 1.2),
+    ('june_season', 1.1),
+    ('june_high_season', 1.5),
+    ('low_season', 0.8);

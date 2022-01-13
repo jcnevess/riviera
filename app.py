@@ -55,7 +55,7 @@ def contract():
 
     elif request.method == 'POST':
         form = request.form
-        id = storage.contract_add(form['guest_id'], form['card_number'], form['checkin_date'],
+        id = storage.contract_add(int(form['guest_id']), form['card_number'], form['checkin_date'],
                                   int(form['days_contracted']), form['billing_strategy'])
         response = make_response('Resource created', 201)
         response.headers['Location'] = url_for('contract_by_id', contract_id=id)
@@ -68,7 +68,7 @@ def contract_by_id(contract_id):
         return jsonify(storage.contract_getbyid(contract_id).to_json())
     elif request.method == 'PUT':
         form = request.form
-        storage.contract_edit(contract_id, form['guest_id'], form['card_number'], form['checkin_date'],
+        storage.contract_edit(contract_id, int(form['guest_id']), form['card_number'], form['checkin_date'],
                               int(form['days_contracted']), bool(strtobool(form['is_open'])))
         return make_response('Resource updated', 200)
     elif request.method == 'DELETE':
@@ -107,10 +107,10 @@ def service(contract_id):
 @app.route('/contracts/<contract_id>/services/<service_id>', methods=['GET', 'PUT', 'DELETE'])
 def service_by_id(contract_id, service_id):
     if request.method == 'GET':
-        return jsonify(storage.service_getbyid(contract_id, service_id).to_json())
+        return jsonify(storage.service_getbyid(service_id).to_json())
 
     elif request.method == 'DELETE':
-        storage.service_delete(contract_id, service_id)
+        storage.service_delete(service_id)
         return make_response('Resource deleted', 200)
 
     elif request.method == 'PUT':
@@ -118,18 +118,18 @@ def service_by_id(contract_id, service_id):
         service_type = form['service_type']
 
         if service_type == 'room_rental':
-            storage.service_edit_room(contract_id, service_id, form['rental_type'], bool(strtobool(form['additional_bed'])), int(form['days']))
+            storage.service_edit_room(service_id, form['rental_type'], bool(strtobool(form['additional_bed'])), int(form['days']))
         elif service_type == 'car_rental':
-            storage.service_edit_car(contract_id, service_id, form['rental_type'], form['car_plate'], bool(strtobool(form['full_gas'])),
+            storage.service_edit_car(service_id, form['rental_type'], form['car_plate'], bool(strtobool(form['full_gas'])),
                                      bool(strtobool(form['car_insurance'])), int(form['days']))
         elif service_type == 'babysitter':
-            storage.service_edit_babysitter(contract_id, service_id, int(form['normal_hours']), int(form['extra_hours']))
+            storage.service_edit_babysitter(service_id, int(form['normal_hours']), int(form['extra_hours']))
         elif service_type == 'meal':
-            storage.service_edit_meal(contract_id, service_id, float(form['unit_price']), form['description'])
+            storage.service_edit_meal(service_id, float(form['unit_price']), form['description'])
         elif service_type == 'penalty_fee':
-            storage.service_edit_penalty_fee(contract_id, service_id, float(form['unit_price']), form['description'], int(form['penalties']))
+            storage.service_edit_penalty_fee(service_id, float(form['unit_price']), form['description'], int(form['penalties']))
         elif service_type == 'extra_service':
-            storage.service_edit_extra(contract_id, service_id, float(form['unit_price']), form['description'])
+            storage.service_edit_extra(service_id, float(form['unit_price']), form['description'])
 
         return make_response('Resource updated', 200)
 

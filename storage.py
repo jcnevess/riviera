@@ -1,12 +1,9 @@
 # coding: utf-8
-import sys
 import uuid
 import configparser
 import mysql.connector as database
 
 from models import *
-from typing import List
-from datetime import datetime
 
 db_config = configparser.ConfigParser()
 db_config.read(r'database.cfg')
@@ -19,30 +16,44 @@ connection = database.connect(**config)
 
 
 class Storage:
-    guests: List[Guest] = []
-    services: List[Service] = []
-    contracts: List[Contract] = []
-    products: List[Product] = [
-        Product(1, 'room_presidential', 1200, 5),
-        Product(2, 'room_luxury_simple', 520, 5),
-        Product(3, 'room_luxury_double', 570, 15),
-        Product(4, 'room_luxury_triple', 620, 20),
-        Product(5, 'room_executive_simple', 360, 5),
-        Product(6, 'room_executive_double', 385, 15),
-        Product(7, 'room_executive_triple', 440, 20),
-        Product(8, 'car_luxury', 100, -1),
-        Product(9, 'car_executive', 60, -1),
-        Product(10, 'car_full_gas', 150, -1),
-        Product(11, 'car_insurance', 100, -1),
-        Product(12, 'babysitter', 25, -1)
-    ]
 
     ''' Helper methods '''
 
-    def __get_product(self, rental_type: str):
-        return list(filter(lambda prod: prod.name == rental_type, self.products))[0]
+    def __get_product(self, name: str):
+        cursor = connection.cursor(buffered=True, dictionary=True)
+        product = None
 
-    @staticmethod
+        query = 'select * from product where name = %s'
+        params = tuple([name])
+
+        cursor.execute(query, params)
+
+        for entry in cursor:
+            product = Product(entry['id'], entry['name'], float(entry['price']), entry['quantity'])
+
+        connection.commit()
+        cursor.close()
+
+        return product
+
+    def __get_product_id(self, id: int):
+        cursor = connection.cursor(buffered=True, dictionary=True)
+        product = None
+
+        query = 'select * from product where id = %s'
+        params = tuple([id])
+
+        cursor.execute(query, params)
+
+        for entry in cursor:
+            product = Product(entry['id'], entry['name'], float(entry['price']), entry['quantity'])
+
+        connection.commit()
+        cursor.close()
+
+        return product
+
+    @staticmethod  # FIXME This won't be needed if we pass strategy_id as param to contract creation
     def __get_billing_strategy(billing_strategy: str):
         if billing_strategy == 'holiday_season':
             return HolidaySeasonStrategy()
@@ -152,154 +163,571 @@ class Storage:
     ''' Contract methods '''
 
     def contract_getall(self):
-        return self.contracts
+        cursor = connection.cursor(buffered=True, dictionary=True)
+        contracts = []
 
-    def contract_getbyid(self, contract_id: str):
-        return list(filter(lambda contract: contract.id == contract_id, self.contracts))[0]
+        query = ('select c.*, '
+                 'cbs.name as strategy_name, cbs.multiplier as strategy_multiplier, '
+                 'g.name as g_name, '
+                 'g.social_number as g_social_number, '
+                 'g.birth_date as g_birth_date, '
+                 'g.phone_number as g_phone_number, '
+                 'g.address_street as g_address_street, '
+                 'g.address_street_number as g_address_street_number, '
+                 'g.address_additional_info as g_address_additional_info, '
+                 'g.address_neighborhood as g_address_neighborhood, '
+                 'g.address_zipcode as g_address_zipcode, '
+                 'g.address_city as g_address_city, '
+                 'g.address_state as g_address_state, '
+                 'g.address_country as g_address_country '
+                 'from contract c join contract_billing_strategy cbs on c.billing_strategy_id = cbs.id '
+                 'join guest g on c.guest_id = g.id')
 
-    def contract_add(self, guest_id: str, card_number: str, checkin_time: str, contracted_days: int,
-                     billing_strategy: str):
-        id = uuid.uuid4().hex
-        guest = self.guest_getbyid(guest_id)
-        checkin_tm = datetime.fromisoformat(checkin_time)
-        bill_strategy = self.__get_billing_strategy(billing_strategy)
-        self.contracts.append(
-            Contract(id, guest, card_number, checkin_tm, contracted_days, billing_strategy=bill_strategy))
+        cursor.execute(query)
+
+        for entry in cursor:
+            address = Address(entry['guest_id'], entry['g_address_street'], entry['g_address_street_number'],
+                              entry['g_address_additional_info'], entry['g_address_neighborhood'], entry['g_address_zipcode'],
+                              entry['g_address_city'], entry['g_address_state'], entry['g_address_country'])
+            guest = Guest(entry['guest_id'], entry['g_name'], entry['g_social_number'], entry['g_birth_date'],
+                          entry['g_phone_number'], address)
+            billing_strategy = self.__get_billing_strategy(entry['strategy_name'])  # TODO Could be better
+            contract = Contract(entry['id'], guest, entry['credit_card_number'], entry['checkin_time'],
+                                entry['contracted_days'], services=[], billing_strategy=billing_strategy, is_open=bool(entry['is_open']), review=None)  # FIXME Retrieve services and reviews
+            contracts.append(contract)
+
+        connection.commit()
+        cursor.close()
+
+        return contracts
+
+    def contract_getbyid(self, contract_id: int):
+        cursor = connection.cursor(buffered=True, dictionary=True)
+        contract = None
+
+        query = ('select c.*, '
+                 'cbs.name as strategy_name, cbs.multiplier as strategy_multiplier, '
+                 'g.name as g_name, '
+                 'g.social_number as g_social_number, '
+                 'g.birth_date as g_birth_date, '
+                 'g.phone_number as g_phone_number, '
+                 'g.address_street as g_address_street, '
+                 'g.address_street_number as g_address_street_number, '
+                 'g.address_additional_info as g_address_additional_info, '
+                 'g.address_neighborhood as g_address_neighborhood, '
+                 'g.address_zipcode as g_address_zipcode, '
+                 'g.address_city as g_address_city, '
+                 'g.address_state as g_address_state, '
+                 'g.address_country as g_address_country '
+                 'from contract c join contract_billing_strategy cbs on c.billing_strategy_id = cbs.id '
+                 'join guest g on c.guest_id = g.id '
+                 'where c.id = %s')
+        params = tuple([contract_id])
+
+        cursor.execute(query, params)
+
+        for entry in cursor:
+            address = Address(entry['guest_id'], entry['g_address_street'], entry['g_address_street_number'],
+                              entry['g_address_additional_info'], entry['g_address_neighborhood'], entry['g_address_zipcode'],
+                              entry['g_address_city'], entry['g_address_state'], entry['g_address_country'])
+            guest = Guest(entry['guest_id'], entry['g_name'], entry['g_social_number'], entry['g_birth_date'],
+                          entry['g_phone_number'], address)
+            billing_strategy = self.__get_billing_strategy(entry['strategy_name'])  # TODO Could be better
+            contract = Contract(entry['id'], guest, entry['credit_card_number'], entry['checkin_time'],
+                                entry['contracted_days'], services=[], billing_strategy=billing_strategy, is_open=bool(entry['is_open']), review=None)  # FIXME Retrieve services and reviews
+
+        connection.commit()
+        cursor.close()
+        return contract
+
+    def contract_add(self, guest_id: int, card_number: str, checkin_time: str, contracted_days: int,
+                     billing_strategy_id: int):
+        cursor = connection.cursor()
+
+        query = ('insert into contract '
+                 '(guest_id, checkin_time, contracted_days, credit_card_number, is_open, '
+                 'billing_strategy_id) '
+                 'values (%s, %s, %s, %s, %s, %s)')
+        params = (guest_id, checkin_time, contracted_days, card_number, True, billing_strategy_id)
+        cursor.execute(query, params)
+
+        connection.commit()
+        id = cursor.lastrowid
+
+        cursor.close()
+
         return id
 
-    def contract_edit(self, contract_id: str, guest_id: str, card_number: str, checkin_time: str, contracted_days: int,
+    def contract_edit(self, contract_id: int, guest_id: int, card_number: str, checkin_time: str, contracted_days: int,
                       is_open: bool):
-        guest = self.guest_getbyid(guest_id)
-        checkin_tm = datetime.fromisoformat(checkin_time)
+        cursor = connection.cursor()
 
-        for (index, contract) in enumerate(self.contracts):
-            if contract.id == contract_id:
-                self.contracts[index] = Contract(contract_id, guest, card_number, checkin_tm, contracted_days,
-                                                 contract.services, is_open=is_open)
+        query = ('update contract '
+                 'set guest_id = %s, '
+                 'checkin_time = %s, '
+                 'contracted_days = %s, '
+                 'credit_card_number = %s, '
+                 'is_open = %s '
+                 'where id = %s')
+        params = (guest_id, checkin_time, contracted_days, card_number, is_open, contract_id)
+        cursor.execute(query, params)
+
+        connection.commit()
+        cursor.close()
 
     def contract_delete(self, contract_id: str):
-        self.contracts = list(filter(lambda contract: contract.id != contract_id, self.contracts))
+        cursor = connection.cursor()
+
+        query = 'delete from contract where id = %s'
+        params = tuple([contract_id])
+        cursor.execute(query, params)
+
+        connection.commit()
+        cursor.close()
 
     ''' Service methods '''
 
-    def service_getall(self, contract_id: str):
-        return [service for contract in self.contracts if contract.id == contract_id for service in contract.services]
+    def service_getall(self, contract_id: int):
+        cursor = connection.cursor(buffered=True, dictionary=True)
+        services = []
 
-    def service_getbyid(self, contract_id: str, service_id: str):
-        return [service for contract in self.contracts if contract.id == contract_id for service in contract.services if
-                service.id == service_id][0]
+        query = ('select *, s.id as service_id, p.id as product_id from service s '
+                 'inner join room_rental rr '
+                 'inner join product p '
+                 'on s.id = rr.service_id '
+                 'and rr.product_id = p.id')
+        cursor.execute(query)
+
+        for entry in cursor:
+            product = Product(entry['product_id'], entry['name'], float(entry['price']), entry['quantity'])
+            service = RoomRental(entry['service_id'], product, bool(entry['has_additional_bed']),
+                                 entry['contracted_days'])
+            services.append(service)
+
+        connection.commit()
+
+        query = ('select *, s.id as service_id, p.id as product_id from service s '
+                 'inner join car_rental cr '
+                 'inner join product p '
+                 'on s.id = cr.service_id '
+                 'and cr.product_id = p.id')
+        cursor.execute(query)
+
+        for entry in cursor:
+            products = [self.__get_product_id(entry['product_id'])]
+            if bool(entry['has_full_gas']):
+                products.append(self.__get_product('car_full_gas'))
+            if bool(entry['has_insurance']):
+                products.append(self.__get_product('car_insurance'))
+            service = CarRental(entry['service_id'], products, entry['car_plate'], bool(entry['has_full_gas']),
+                                bool(entry['has_insurance']), entry['contracted_days'])
+            services.append(service)
+
+        connection.commit()
+
+        query = ('select *, s.id as service_id, p.id as product_id from service s '
+                 'inner join babysitter b '
+                 'inner join product p '
+                 'on s.id = b.service_id '
+                 'and b.product_id = p.id')
+        cursor.execute(query)
+
+        for entry in cursor:
+            product = Product(entry['product_id'], entry['name'], float(entry['price']), entry['quantity'])
+            service = Babysitter(entry['service_id'], product, entry['normal_hours'], entry['extra_hours'])
+            services.append(service)
+
+        connection.commit()
+
+        query = ('select * from service s '
+                 'inner join meal m '
+                 'on s.id = m.service_id')
+        cursor.execute(query)
+
+        for entry in cursor:
+            service = Meal(entry['service_id'], float(entry['unit_price']), entry['description'])
+            services.append(service)
+
+        connection.commit()
+
+        query = ('select * from service s '
+                 'inner join penalty_fee p '
+                 'on s.id = p.service_id')
+        cursor.execute(query)
+
+        for entry in cursor:
+            service = PenaltyFee(entry['service_id'], float(entry['unit_price']), entry['description'],
+                                 entry['penalties'])
+            services.append(service)
+
+        connection.commit()
+
+        query = ('select * from service s '
+                 'inner join extra_service e '
+                 'on s.id = e.service_id')
+        cursor.execute(query)
+
+        for entry in cursor:
+            service = ExtraService(entry['service_id'], float(entry['unit_price']), entry['description'])
+            services.append(service)
+
+        connection.commit()
+
+        cursor.close()
+        return services
+
+    def service_getbyid(self, service_id: int):
+        cursor = connection.cursor(buffered=True, dictionary=True)
+        service_type = ''
+        service = None
+
+        query = 'select * from service where id = %s'
+        params = tuple([service_id])
+        cursor.execute(query, params)
+        for entry in cursor:
+            service_type = entry['service_type']
+        connection.commit()
+
+        if service_type == 'room_rental':
+            query = ('select *, s.id as service_id, p.id as product_id from service s '
+                     'inner join room_rental rr '
+                     'inner join product p '
+                     'on s.id = rr.service_id '
+                     'and rr.product_id = p.id '
+                     'where s.id = %s')
+            params = tuple([service_id])
+            cursor.execute(query, params)
+
+            for entry in cursor:
+                product = Product(entry['product_id'], entry['name'], float(entry['price']), entry['quantity'])
+                service = RoomRental(entry['service_id'], product, bool(entry['has_additional_bed']), entry['contracted_days'])
+            connection.commit()
+
+        elif service_type == 'car_rental':
+            query = ('select *, s.id as service_id, p.id as product_id from service s '
+                     'inner join car_rental cr '
+                     'inner join product p '
+                     'on s.id = cr.service_id '
+                     'and cr.product_id = p.id '
+                     'where s.id = %s')
+            params = tuple([service_id])
+            cursor.execute(query, params)
+
+            for entry in cursor:
+                products = [self.__get_product_id(entry['product_id'])]
+                if bool(entry['has_full_gas']):
+                    products.append(self.__get_product('car_full_gas'))
+                if bool(entry['has_insurance']):
+                    products.append(self.__get_product('car_insurance'))
+                service = CarRental(entry['service_id'], products, entry['car_plate'], bool(entry['has_full_gas']),
+                                    bool(entry['has_insurance']), entry['contracted_days'])
+            connection.commit()
+
+        elif service_type == 'babysitter':
+            query = ('select *, s.id as service_id, p.id as product_id from service s '
+                     'inner join babysitter b '
+                     'inner join product p '
+                     'on s.id = b.service_id '
+                     'and b.product_id = p.id '
+                     'where s.id = %s')
+            params = tuple([service_id])
+            cursor.execute(query, params)
+
+            for entry in cursor:
+                product = Product(entry['product_id'], entry['name'], float(entry['price']), entry['quantity'])
+                service = Babysitter(entry['service_id'], product, entry['normal_hours'], entry['extra_hours'])
+            connection.commit()
+
+        elif service_type == 'meal':
+            query = ('select * from service s '
+                     'inner join meal m '
+                     'on s.id = m.service_id '
+                     'where s.id = %s')
+            params = tuple([service_id])
+            cursor.execute(query, params)
+
+            for entry in cursor:
+                service = Meal(entry['service_id'], float(entry['unit_price']), entry['description'])
+            connection.commit()
+
+        elif service_type == 'penalty_fee':
+            query = ('select * from service s '
+                     'inner join penalty_fee p '
+                     'on s.id = p.service_id '
+                     'where s.id = %s')
+            params = tuple([service_id])
+            cursor.execute(query, params)
+
+            for entry in cursor:
+                service = PenaltyFee(entry['service_id'], float(entry['unit_price']), entry['description'], entry['penalties'])
+            connection.commit()
+
+        elif service_type == 'extra_service':
+            query = ('select * from service s '
+                     'inner join extra_service e '
+                     'on s.id = e.service_id '
+                     'where s.id = %s')
+            params = tuple([service_id])
+            cursor.execute(query, params)
+
+            for entry in cursor:
+                service = ExtraService(entry['service_id'], float(entry['unit_price']), entry['description'])
+            connection.commit()
+
+        cursor.close()
+        return service
 
     def service_add_room(self, contract_id: str, rental_type: str, additional_bed: bool, days: int):
-        id = uuid.uuid4().hex
-        room_rental_type = self.__get_product(rental_type)
-        for contract in self.contracts:
-            if contract.id == contract_id:
-                contract.services.append(RoomRental(id, room_rental_type, additional_bed, days))
-        return id
+        cursor = connection.cursor()
 
-    def service_add_car(self, contract_id: str, rental_type: str, car_plate: str, full_gas: bool, car_insurance: bool,
+        query = ('insert into service '
+                 '(contract_id, service_type) values '
+                 '(%s, %s)')
+        params = (contract_id, 'room_rental')
+        cursor.execute(query, params)
+        connection.commit()
+
+        service_id = cursor.lastrowid
+
+        product_id = self.__get_product(rental_type).id
+
+        query = ('insert into room_rental '
+                 '(service_id, product_id, contracted_days, has_additional_bed) values '
+                 '(%s, %s, %s, %s)')
+        params = (service_id, product_id, days, additional_bed)
+        cursor.execute(query, params)
+
+        connection.commit()
+        cursor.close()
+
+        return service_id
+
+    def service_add_car(self, contract_id: int, rental_type: str, car_plate: str, full_gas: bool, car_insurance: bool,
                         days: int):
-        id = uuid.uuid4().hex
+        cursor = connection.cursor()
 
-        products = [self.__get_product(rental_type)]
-        if full_gas:
-            products.append(self.__get_product('car_full_gas'))
+        query = ('insert into service '
+                 '(contract_id, service_type) values '
+                 '(%s, %s)')
+        params = (contract_id, 'car_rental')
+        cursor.execute(query, params)
+        connection.commit()
 
-        if car_insurance:
-            products.append(self.__get_product('car_insurance'))
+        service_id = cursor.lastrowid
 
-        for contract in self.contracts:
-            if contract.id == contract_id:
-                contract.services.append(CarRental(id, products, car_plate, full_gas, car_insurance, days))
-        return id
+        product_id = self.__get_product(rental_type).id
 
-    def service_add_babysitter(self, contract_id: str, normal_hours: int, extra_hours: int):
-        id = uuid.uuid4().hex
-        product = list(filter(lambda prod: prod.name == 'babysitter', self.products))[0]
-        for contract in self.contracts:
-            if contract.id == contract_id:
-                contract.services.append(Babysitter(id, product, normal_hours, extra_hours))
-        return id
+        query = ('insert into car_rental '
+                 '(service_id, product_id, contracted_days, car_plate, has_full_gas, has_insurance) values '
+                 '(%s, %s, %s, %s, %s, %s)')
+        params = (service_id, product_id, days, car_plate, full_gas, car_insurance)
+        cursor.execute(query, params)
 
-    def service_add_meal(self, contract_id: str, unit_price: float, description: str):
-        id = uuid.uuid4().hex
-        for contract in self.contracts:
-            if contract.id == contract_id:
-                contract.services.append(Meal(id, unit_price, description))
-        return id
+        connection.commit()
+        cursor.close()
 
-    def service_add_penalty_fee(self, contract_id: str, unit_price: float, description: str, penalties: int):
-        id = uuid.uuid4().hex
-        for contract in self.contracts:
-            if contract.id == contract_id:
-                contract.services.append(PenaltyFee(id, unit_price, description, penalties))
-        return id
+        return service_id
 
-    def service_add_extra(self, contract_id: str, unit_price: float, description: str):
-        id = uuid.uuid4().hex
-        for contract in self.contracts:
-            if contract.id == contract_id:
-                contract.services.append(ExtraService(id, unit_price, description))
-        return id
+    def service_add_babysitter(self, contract_id: int, normal_hours: int, extra_hours: int):
+        cursor = connection.cursor()
 
-    def service_edit_room(self, contract_id: str, service_id: str, rental_type: str, additional_bed: bool, days: int):
-        room_rental_type = self.__get_product(rental_type)
-        for contract in self.contracts:
-            if contract.id == contract_id:
-                for (index, service) in enumerate(contract.services):
-                    if service.id == service_id:
-                        contract.services[index] = RoomRental(service_id, room_rental_type, additional_bed, days)
+        query = ('insert into service '
+                 '(contract_id, service_type) values '
+                 '(%s, %s)')
+        params = (contract_id, 'babysitter')
+        cursor.execute(query, params)
+        connection.commit()
 
-    def service_edit_car(self, contract_id: str, service_id: str, rental_type: str, car_plate: str, full_gas: bool,
-                         car_insurance: bool,
-                         days: int):
-        for contract in self.contracts:
-            if contract.id == contract_id:
-                for (index, service) in enumerate(contract.services):
-                    if service.id == service_id:
-                        products = [self.__get_product(rental_type)]
-                        if full_gas:
-                            products.append(self.__get_product('car_full_gas'))
+        service_id = cursor.lastrowid
 
-                        if car_insurance:
-                            products.append(self.__get_product('car_insurance'))
-                        contract.services[index] = CarRental(service_id, products, car_plate, full_gas, car_insurance,
-                                                             days)
+        product_id = self.__get_product('babysitter').id
 
-    def service_edit_babysitter(self, contract_id: str, service_id: str, normal_hours: int, extra_hours: int):
-        product = list(filter(lambda prod: prod.name == 'babysitter', self.products))[0]
-        for contract in self.contracts:
-            if contract.id == contract_id:
-                for (index, service) in enumerate(contract.services):
-                    if service.id == service_id:
-                        contract.services[index] = Babysitter(service_id, product, normal_hours, extra_hours)
+        query = ('insert into babysitter '
+                 '(service_id, product_id, normal_hours, extra_hours) values '
+                 '(%s, %s, %s, %s)')
+        params = (service_id, product_id, normal_hours, extra_hours)
+        cursor.execute(query, params)
 
-    def service_edit_meal(self, contract_id: str, service_id: str, unit_price: float, description: str):
-        for contract in self.contracts:
-            if contract.id == contract_id:
-                for (index, service) in enumerate(contract.services):
-                    if service.id == service_id:
-                        contract.services[index] = Meal(service_id, unit_price, description)
+        connection.commit()
+        cursor.close()
 
-    def service_edit_penalty_fee(self, contract_id: str, service_id: str, unit_price: float, description: str,
+        return service_id
+
+    def service_add_meal(self, contract_id: int, unit_price: float, description: str):
+        cursor = connection.cursor()
+
+        query = ('insert into service '
+                 '(contract_id, service_type) values '
+                 '(%s, %s)')
+        params = (contract_id, 'meal')
+        cursor.execute(query, params)
+        connection.commit()
+
+        service_id = cursor.lastrowid
+
+        query = ('insert into meal '
+                 '(service_id, unit_price, description) values '
+                 '(%s, %s, %s)')
+        params = (service_id, unit_price, description)
+        cursor.execute(query, params)
+
+        connection.commit()
+        cursor.close()
+
+        return service_id
+
+    def service_add_penalty_fee(self, contract_id: int, unit_price: float, description: str, penalties: int):
+        cursor = connection.cursor()
+
+        query = ('insert into service '
+                 '(contract_id, service_type) values '
+                 '(%s, %s)')
+        params = (contract_id, 'penalty_fee')
+        cursor.execute(query, params)
+        connection.commit()
+
+        service_id = cursor.lastrowid
+
+        query = ('insert into penalty_fee '
+                 '(service_id, unit_price, description, penalties) values '
+                 '(%s, %s, %s, %s)')
+        params = (service_id, unit_price, description, penalties)
+        cursor.execute(query, params)
+
+        connection.commit()
+        cursor.close()
+
+        return service_id
+
+    def service_add_extra(self, contract_id: int, unit_price: float, description: str):
+        cursor = connection.cursor()
+
+        query = ('insert into service '
+                 '(contract_id, service_type) values '
+                 '(%s, %s)')
+        params = (contract_id, 'extra_service')
+        cursor.execute(query, params)
+        connection.commit()
+
+        service_id = cursor.lastrowid
+
+        query = ('insert into extra_service '
+                 '(service_id, unit_price, description) values '
+                 '(%s, %s, %s)')
+        params = (service_id, unit_price, description)
+        cursor.execute(query, params)
+
+        connection.commit()
+        cursor.close()
+
+        return service_id
+
+    def service_edit_room(self, service_id: int, rental_type: str, additional_bed: bool, days: int):
+        cursor = connection.cursor()
+
+        product_id = self.__get_product(rental_type).id
+
+        query = ('update room_rental '
+                 'set product_id = %s, '
+                 'contracted_days = %s, '
+                 'has_additional_bed = %s '
+                 'where service_id = %s')
+        params = (product_id, days, additional_bed, service_id)
+        cursor.execute(query, params)
+
+        connection.commit()
+        cursor.close()
+
+        return service_id
+
+    def service_edit_car(self, service_id: int, rental_type: str, car_plate: str, full_gas: bool,
+                         car_insurance: bool, days: int):
+        cursor = connection.cursor()
+
+        product_id = self.__get_product(rental_type).id
+
+        query = ('update car_rental '
+                 'set product_id = %s, '
+                 'contracted_days = %s, '
+                 'car_plate = %s, '
+                 'has_full_gas = %s, '
+                 'has_insurance = %s '
+                 'where service_id = %s')
+        params = (product_id, days, car_plate, full_gas, car_insurance, service_id)
+        cursor.execute(query, params)
+
+        connection.commit()
+        cursor.close()
+
+        return service_id
+
+    def service_edit_babysitter(self, service_id: int, normal_hours: int, extra_hours: int):
+        cursor = connection.cursor()
+
+        product_id = self.__get_product('babysitter').id
+
+        query = ('update babysitter '
+                 'set product_id = %s, '
+                 'normal_hours = %s, '
+                 'extra_hours = %s '
+                 'where service_id = %s')
+        params = (product_id, normal_hours, extra_hours, service_id)
+        cursor.execute(query, params)
+
+        connection.commit()
+        cursor.close()
+
+    def service_edit_meal(self, service_id: int, unit_price: float, description: str):
+        cursor = connection.cursor()
+
+        query = ('update meal '
+                 'set unit_price = %s, '
+                 'description = %s '
+                 'where service_id = %s')
+        params = (unit_price, description, service_id)
+        cursor.execute(query, params)
+
+        connection.commit()
+        cursor.close()
+
+    def service_edit_penalty_fee(self, service_id: int, unit_price: float, description: str,
                                  penalties: int):
-        for contract in self.contracts:
-            if contract.id == contract_id:
-                for (index, service) in enumerate(contract.services):
-                    if service.id == service_id:
-                        contract.services[index] = PenaltyFee(service_id, unit_price, description, penalties)
+        cursor = connection.cursor()
 
-    def service_edit_extra(self, contract_id: str, service_id: str, unit_price: float, description: str):
-        for contract in self.contracts:
-            if contract.id == contract_id:
-                for (index, service) in enumerate(contract.services):
-                    if service.id == service_id:
-                        contract.services[index] = ExtraService(service_id, unit_price, description)
+        query = ('update penalty_fee '
+                 'set unit_price = %s, '
+                 'description = %s, '
+                 'penalties = %s '
+                 'where service_id = %s')
+        params = (unit_price, description, penalties, service_id)
+        cursor.execute(query, params)
 
-    def service_delete(self, contract_id: str, service_id: str):
-        for contract in self.contracts:
-            if contract.id == contract_id:
-                contract.services = list(filter(lambda service: service.id != service_id, contract.services))
+        connection.commit()
+        cursor.close()
+
+    def service_edit_extra(self, service_id: int, unit_price: float, description: str):
+        cursor = connection.cursor()
+
+        query = ('update extra_service '
+                 'set unit_price = %s, '
+                 'description = %s '
+                 'where service_id = %s')
+        params = (unit_price, description, service_id)
+        cursor.execute(query, params)
+
+        connection.commit()
+        cursor.close()
+
+    def service_delete(self, service_id: int):
+        cursor = connection.cursor()
+
+        query = ('delete from service '
+                 'where id = %s')
+        params = tuple([service_id])
+        cursor.execute(query, params)
+
+        connection.commit()
+        cursor.close()
 
     ''' Room methods '''
 

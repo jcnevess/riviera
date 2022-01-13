@@ -57,7 +57,7 @@ class Product:
 
 @dataclass
 class Service:
-    id: str
+    id: int
 
     def get_price(self):
         return 0.0
@@ -283,7 +283,7 @@ class Review:
 
 @dataclass
 class Contract:
-    id: str
+    id: int
     guest: Guest
     card_number: str
     checkin_time: datetime
