@@ -54,7 +54,7 @@ create table `review`(
 );
 
 alter table `contract`
-    add constraint foreign key (`review_id`) references `review`(`id`);
+    add constraint foreign key (`review_id`) references `review`(`id`) on delete set null;
 
 create table `product`(
     `id` int(64) auto_increment,

@@ -56,7 +56,7 @@ def contract():
     elif request.method == 'POST':
         form = request.form
         id = storage.contract_add(int(form['guest_id']), form['card_number'], form['checkin_date'],
-                                  int(form['days_contracted']), form['billing_strategy'])
+                                  int(form['days_contracted']), int(form['billing_strategy_id']))
         response = make_response('Resource created', 201)
         response.headers['Location'] = url_for('contract_by_id', contract_id=id)
         return response
@@ -164,8 +164,8 @@ def room():
     elif request.method == 'PUT':
         action = request.args.get('action')
         if action == 'book':
-            storage.room_book(form['rental_type'])
+            storage.room_book(int(form['rental_type']))
         elif action == 'unbook':
-            storage.room_unbook(form['rental_type'])
+            storage.room_unbook(int(form['rental_type']))
 
     return make_response('Resource updated', 200)

@@ -215,7 +215,7 @@ class ExtraService(Service):
             'service_price': self.get_price()
         }
 
-
+# FIXME Make strategies stateless too
 class BillingStrategy:
     def get_base_bill(self, services: List[Service]):
         bill_value = 0.0
@@ -273,7 +273,7 @@ class LowSeasonStrategy(BillingStrategy):
 
 @dataclass
 class Review:
-    id: str
+    id: int
     rating: int
     comment: str
 
