@@ -2,48 +2,54 @@
 
 from storage import Storage
 from flask import Flask, request, jsonify, url_for, make_response
-from distutils.util import strtobool
+from http import HTTPStatus
 
 app = Flask(__name__)
 storage = Storage()
 
+GET = 'GET'
+POST = 'POST'
+PUT = 'PUT'
+DELETE = 'DELETE'
 
-@app.route('/guests', methods=['GET', 'POST'])
+
+@app.route('/guests', methods=[GET, POST])
 def guest():
-    if request.method == 'GET':
-        return jsonify(list(map(lambda i: i.to_json(), storage.guest_getall())))
-    elif request.method == 'POST':
-        form = request.form
-        storage.guest_add(form['name'], form['social_number'], form['birthdate'], form['phone_number'], form['address_street'],
-                          form['address_number'], form['address_additional_info'], form['address_neighborhood'],
-                          form['address_zipcode'], form['address_city'], form['address_state'], form['address_country'])
+    if request.method == GET:
+        return jsonify(list(map(lambda i: i.to_json(), storage.guest_get_all())))
+    elif request.method == POST:
+        body = request.json
+        storage.guest_add(body['name'], body['social_number'], body['birthdate'], body['phone_number'],
+                          body['address_street'], body['address_number'], body['address_additional_info'],
+                          body['address_neighborhood'], body['address_zipcode'], body['address_city'],
+                          body['address_state'], body['address_country'])
 
-        response = make_response('Resource Created', 201)
-        response.headers['Location'] = url_for('guest_by_id', guest_id=form['social_number'])
+        response = make_response('Resource Created', HTTPStatus.OK)
+        response.headers['Location'] = url_for('guest_by_id', guest_id=body['social_number'])
         return response
 
 
-# using ssn as id for now
-@app.route('/guests/<int:guest_id>', methods=['GET', 'PUT'])
+@app.route('/guests/<int:guest_id>', methods=[GET, PUT])
 def guest_by_id(guest_id):
-    if request.method == 'GET':
-        return jsonify(storage.guest_getbyid(guest_id).to_json())
-    elif request.method == 'PUT':
-        form = request.form
-        storage.guest_edit(guest_id, form['name'], form['social_number'], form['birthdate'], form['phone_number'], form['address_street'],
-                           form['address_number'], form['address_additional_info'], form['address_neighborhood'],
-                           form['address_zipcode'], form['address_city'], form['address_state'], form['address_country'])
+    if request.method == GET:
+        return jsonify(storage.guest_get_byid(guest_id).to_json())
+    elif request.method == PUT:
+        body = request.json
+        storage.guest_edit(guest_id, body['name'], body['social_number'], body['birthdate'], body['phone_number'],
+                           body['address_street'], body['address_number'], body['address_additional_info'],
+                           body['address_neighborhood'], body['address_zipcode'], body['address_city'],
+                           body['address_state'], body['address_country'])
 
-        response = make_response('Resource Updated', 200)
-        response.headers['Location'] = url_for('guest_by_id', guest_id=form['social_number'])
+        response = make_response('Resource Updated', HTTPStatus.OK)
+        response.headers['Location'] = url_for('guest_by_id', guest_id=body['social_number'])
         return response
 
 
-@app.route('/contracts', methods=['GET', 'POST'])
+@app.route('/contracts', methods=[GET, POST])
 def contract():
-    if request.method == 'GET':
+    if request.method == GET:
         args = request.args
-        result = storage.contract_getall()
+        result = storage.contract_get_all()
 
         if args.get('month'):
             result = filter(lambda c: c.checkin_time.month == int(args.get('month')), result)
@@ -53,119 +59,134 @@ def contract():
 
         return jsonify(list(map(lambda c: c.to_json(), result)))
 
-    elif request.method == 'POST':
-        form = request.form
-        id = storage.contract_add(int(form['guest_id']), form['card_number'], form['checkin_date'],
-                                  int(form['days_contracted']), int(form['billing_strategy_id']))
-        response = make_response('Resource created', 201)
+    elif request.method == POST:
+        body = request.json
+        id = storage.contract_add(int(body['guest_id']), body['card_number'], body['checkin_date'],
+                                  int(body['days_contracted']), body['billing_strategy_id'])
+        response = make_response('Resource created', HTTPStatus.CREATED)
         response.headers['Location'] = url_for('contract_by_id', contract_id=id)
         return response
 
 
-@app.route('/contracts/<contract_id>', methods=['GET', 'PUT', 'DELETE'])
+@app.route('/contracts/<int:contract_id>', methods=[GET, PUT, DELETE])
 def contract_by_id(contract_id):
-    if request.method == 'GET':
-        return jsonify(storage.contract_getbyid(contract_id).to_json())
-    elif request.method == 'PUT':
-        form = request.form
-        storage.contract_edit(contract_id, int(form['guest_id']), form['card_number'], form['checkin_date'],
-                              int(form['days_contracted']), bool(strtobool(form['is_open'])))
-        return make_response('Resource updated', 200)
-    elif request.method == 'DELETE':
+    if request.method == GET:
+        return jsonify(storage.contract_get_byid(contract_id).to_json())
+    elif request.method == PUT:
+        body = request.json
+        storage.contract_edit(contract_id, body['guest_id'], body['card_number'], body['checkin_date'],
+                              body['days_contracted'], body['is_open'])
+        return make_response('Resource updated', HTTPStatus.OK)
+    elif request.method == DELETE:
         storage.contract_delete(contract_id)
-        return make_response('Resource deleted', 200)
+        return make_response('Resource deleted', HTTPStatus.OK)
 
 
-@app.route('/contracts/<contract_id>/services', methods=['GET', 'POST'])
+@app.route('/contracts/<int:contract_id>/services', methods=[GET, POST])
 def service(contract_id):
-    if request.method == 'GET':
-        return jsonify(list(map(lambda s: s.to_json(), storage.service_getall(contract_id))))
-    elif request.method == 'POST':
-        form = request.form
-        service_type = form['service_type']
+    if request.method == GET:
+        return jsonify(list(map(lambda s: s.to_json(), storage.service_get_all(contract_id))))
+    elif request.method == POST:
+        body = request.json
+        service_type = body['service_type']
         id = -1
 
         if service_type == 'room_rental':
-            id = storage.service_add_room(contract_id, form['rental_type'], bool(strtobool(form['additional_bed'])), int(form['days']))
-        elif service_type == 'car_rental':
-            id = storage.service_add_car(contract_id, form['rental_type'], form['car_plate'], bool(strtobool(form['full_gas'])),
-                                         bool(strtobool(form['car_insurance'])), int(form['days']))
-        elif service_type == 'babysitter':
-            id = storage.service_add_babysitter(contract_id, int(form['normal_hours']), int(form['extra_hours']))
-        elif service_type == 'meal':
-            id = storage.service_add_meal(contract_id, float(form['unit_price']), form['description'])
-        elif service_type == 'penalty_fee':
-            id = storage.service_add_penalty_fee(contract_id, float(form['unit_price']), form['description'], int(form['penalties']))
-        elif service_type == 'extra_service':
-            id = storage.service_add_extra(contract_id, float(form['unit_price']), form['description'])
+            id = storage.service_add_room(contract_id, body['rental_type'],
+                                          body['additional_bed'], body['days'])
 
-        response = make_response('Resource created', 201)
+        elif service_type == 'car_rental':
+            id = storage.service_add_car(contract_id, body['rental_type'], body['car_plate'],
+                                         body['full_gas'], body['car_insurance'], body['days'])
+
+        elif service_type == 'babysitter':
+            id = storage.service_add_babysitter(contract_id, body['normal_hours'], body['extra_hours'])
+
+        elif service_type == 'meal':
+            id = storage.service_add_meal(contract_id, body['unit_price'], body['description'])
+
+        elif service_type == 'penalty_fee':
+            id = storage.service_add_penalty_fee(contract_id, body['unit_price'],
+                                                 body['description'], body['penalties'])
+
+        elif service_type == 'extra_service':
+            id = storage.service_add_extra(contract_id, body['unit_price'], body['description'])
+
+        response = make_response('Resource created', HTTPStatus.CREATED)
         response.headers['Location'] = url_for('service_by_id', contract_id=contract_id, service_id=id)
         return response
 
 
-@app.route('/contracts/<contract_id>/services/<service_id>', methods=['GET', 'PUT', 'DELETE'])
+@app.route('/contracts/<int:contract_id>/services/<int:service_id>', methods=[GET, PUT, DELETE])
 def service_by_id(contract_id, service_id):
-    if request.method == 'GET':
-        return jsonify(storage.service_getbyid(service_id).to_json())
+    if request.method == GET:
+        return jsonify(storage.service_get_byid(service_id).to_json())
 
-    elif request.method == 'DELETE':
+    elif request.method == DELETE:
         storage.service_delete(service_id)
-        return make_response('Resource deleted', 200)
+        return make_response('Resource deleted', HTTPStatus.OK)
 
-    elif request.method == 'PUT':
-        form = request.form
-        service_type = form['service_type']
+    elif request.method == PUT:
+        body = request.json
+        service_type = body['service_type']
 
         if service_type == 'room_rental':
-            storage.service_edit_room(service_id, form['rental_type'], bool(strtobool(form['additional_bed'])), int(form['days']))
+            storage.service_edit_room(service_id, body['rental_type'], body['additional_bed'], body['days'])
+
         elif service_type == 'car_rental':
-            storage.service_edit_car(service_id, form['rental_type'], form['car_plate'], bool(strtobool(form['full_gas'])),
-                                     bool(strtobool(form['car_insurance'])), int(form['days']))
+            storage.service_edit_car(service_id, body['rental_type'], body['car_plate'],
+                                     body['full_gas'], body['car_insurance'], body['days'])
+
         elif service_type == 'babysitter':
-            storage.service_edit_babysitter(service_id, int(form['normal_hours']), int(form['extra_hours']))
+            storage.service_edit_babysitter(service_id, body['normal_hours'], body['extra_hours'])
+
         elif service_type == 'meal':
-            storage.service_edit_meal(service_id, float(form['unit_price']), form['description'])
+            storage.service_edit_meal(service_id, body['unit_price'], body['description'])
+
         elif service_type == 'penalty_fee':
-            storage.service_edit_penalty_fee(service_id, float(form['unit_price']), form['description'], int(form['penalties']))
+            storage.service_edit_penalty_fee(service_id, body['unit_price'], body['description'], body['penalties'])
+
         elif service_type == 'extra_service':
-            storage.service_edit_extra(service_id, float(form['unit_price']), form['description'])
+            storage.service_edit_extra(service_id, body['unit_price'], body['description'])
 
-        return make_response('Resource updated', 200)
+        return make_response('Resource updated', HTTPStatus.OK)
 
 
-@app.route('/contracts/<contract_id>/review', methods=['GET', 'POST', 'PUT', 'DELETE'])
+@app.route('/contracts/<int:contract_id>/review', methods=[GET, POST, PUT, DELETE])
 def review(contract_id):
-    form = request.form
+    body = request.json
 
-    if request.method == 'GET':
+    if request.method == GET:
         rev = storage.review_get(contract_id)
         return rev.to_json() if rev else {}
-    elif request.method == 'POST':
-        storage.review_add(contract_id, int(form['rating']), form['comment'])
-        response = make_response('Resource created', 201)
+
+    elif request.method == POST:
+        storage.review_add(contract_id, body['rating'], body['comment'])
+        response = make_response('Resource created', HTTPStatus.CREATED)
         response.headers['Location'] = url_for('review', contract_id=contract_id)
         return response
-    elif request.method == 'PUT':
-        storage.review_edit(contract_id, int(form['rating']), form['comment'])
-        return make_response('Resource updated', 200)
-    elif request.method == 'DELETE':
+
+    elif request.method == PUT:
+        storage.review_edit(contract_id, body['rating'], body['comment'])
+        return make_response('Resource updated', HTTPStatus.OK)
+
+    elif request.method == DELETE:
         storage.review_delete(contract_id)
-        return make_response('Resource deleted', 200)
+        return make_response('Resource deleted', HTTPStatus.OK)
 
 
-@app.route('/rooms', methods=['GET', 'PUT'])
+@app.route('/rooms', methods=[GET, PUT])
 def room():
-    form = request.form
+    body = request.json
 
-    if request.method == 'GET':
-        return jsonify(storage.room_getall())
+    if request.method == GET:
+        return jsonify(storage.room_get_all())
 
-    elif request.method == 'PUT':
+    elif request.method == PUT:
         action = request.args.get('action')
         if action == 'book':
-            storage.room_book(int(form['rental_type']))
+            storage.room_book(body['rental_type'])
         elif action == 'unbook':
-            storage.room_unbook(int(form['rental_type']))
+            storage.room_unbook(body['rental_type'])
 
-    return make_response('Resource updated', 200)
+    return make_response('Resource updated', HTTPStatus.OK)
