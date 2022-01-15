@@ -16,7 +16,7 @@ connection = database.connect(**config)
 
 class Storage:
 
-    ''' Helper methods '''
+    # Helper methods
 
     @staticmethod
     def __get_product(name: str):
@@ -71,10 +71,10 @@ class Storage:
         else:
             return BillingStrategy()
 
-    ''' Guest methods. Using SSN as id for now. '''
+    # Guest methods
 
     @staticmethod
-    def guest_getall():
+    def guest_get_all():
         cursor = connection.cursor(buffered=True, dictionary=True)
         data = []
 
@@ -96,7 +96,7 @@ class Storage:
         return data
 
     @staticmethod
-    def guest_getbyid(guest_id: int):
+    def guest_get_byid(guest_id: int):
         cursor = connection.cursor(buffered=True, dictionary=True)
         guest = None
 
@@ -171,10 +171,10 @@ class Storage:
         connection.commit()
         cursor.close()
 
-    ''' Contract methods '''
+    # Contract methods
 
     @staticmethod
-    def contract_getall():
+    def contract_get_all():
         cursor = connection.cursor(buffered=True, dictionary=True)
         contracts = []
 
@@ -204,9 +204,10 @@ class Storage:
             guest = Guest(entry['guest_id'], entry['g_name'], entry['g_social_number'], entry['g_birth_date'],
                           entry['g_phone_number'], address)
             billing_strategy = Storage.__get_billing_strategy(entry['strategy_name'])
-            services = Storage.service_getall(entry['id'])
+            services = Storage.service_get_all(entry['id'])
             review = Storage.review_get(entry['id'])
-            contract = Contract(entry['id'], guest, entry['credit_card_number'], entry['checkin_time'], entry['contracted_days'],
+            contract = Contract(entry['id'], guest, entry['credit_card_number'],
+                                entry['checkin_time'], entry['contracted_days'],
                                 services=services, billing_strategy=billing_strategy,
                                 is_open=bool(entry['is_open']), review=review)
             contracts.append(contract)
@@ -217,7 +218,7 @@ class Storage:
         return contracts
 
     @staticmethod
-    def contract_getbyid(contract_id: int):
+    def contract_get_byid(contract_id: int):
         cursor = connection.cursor(buffered=True, dictionary=True)
         contract = None
 
@@ -249,9 +250,10 @@ class Storage:
             guest = Guest(entry['guest_id'], entry['g_name'], entry['g_social_number'], entry['g_birth_date'],
                           entry['g_phone_number'], address)
             billing_strategy = Storage.__get_billing_strategy(entry['strategy_name'])
-            services = Storage.service_getall(entry['id'])
+            services = Storage.service_get_all(entry['id'])
             review = Storage.review_get(entry['id'])
-            contract = Contract(entry['id'], guest, entry['credit_card_number'], entry['checkin_time'], entry['contracted_days'],
+            contract = Contract(entry['id'], guest, entry['credit_card_number'],
+                                entry['checkin_time'], entry['contracted_days'],
                                 services=services, billing_strategy=billing_strategy,
                                 is_open=bool(entry['is_open']), review=review)
 
@@ -308,10 +310,10 @@ class Storage:
         connection.commit()
         cursor.close()
 
-    ''' Service methods '''
+    # Service methods
 
     @staticmethod
-    def service_getall(contract_id: int):
+    def service_get_all(contract_id: int):
         cursor = connection.cursor(buffered=True, dictionary=True)
         services = []
 
@@ -403,7 +405,7 @@ class Storage:
         return services
 
     @staticmethod
-    def service_getbyid(service_id: int):
+    def service_get_byid(service_id: int):
         cursor = connection.cursor(buffered=True, dictionary=True)
         service_type = ''
         service = None
@@ -429,7 +431,8 @@ class Storage:
 
             for entry in cursor:
                 product = Product(entry['product_id'], entry['name'], float(entry['price']), entry['quantity'])
-                service = RoomRental(entry['service_id'], product, bool(entry['has_additional_bed']), entry['contracted_days'])
+                service = RoomRental(entry['service_id'], product, bool(entry['has_additional_bed']),
+                                     entry['contracted_days'])
             connection.commit()
 
         elif service_type == 'car_rental':
@@ -488,7 +491,8 @@ class Storage:
             cursor.execute(query, params)
 
             for entry in cursor:
-                service = PenaltyFee(entry['service_id'], float(entry['unit_price']), entry['description'], entry['penalties'])
+                service = PenaltyFee(entry['service_id'], float(entry['unit_price']),
+                                     entry['description'], entry['penalties'])
             connection.commit()
 
         elif service_type == 'extra_service':
@@ -771,10 +775,10 @@ class Storage:
         connection.commit()
         cursor.close()
 
-    ''' Room methods '''
+    # Room methods
 
     @staticmethod
-    def room_getall():
+    def room_get_all():
         cursor = connection.cursor(buffered=True, dictionary=True)
         rooms = []
 
@@ -819,7 +823,7 @@ class Storage:
         connection.commit()
         cursor.close()
 
-    ''' Review methods '''
+    # Review methods
 
     @staticmethod
     def review_get(contract_id: int):
