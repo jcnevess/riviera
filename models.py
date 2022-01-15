@@ -15,7 +15,7 @@ class Address:
     neighborhood: str
     zipcode: str
     city: str
-    state: str 
+    state: str
     country: str
 
     def to_json(self):
@@ -160,7 +160,7 @@ class Babysitter(Service):
 @dataclass
 class Meal(Service):
     unit_price: float
-    description: str    
+    description: str
     SERVICE_TYPE: str = 'meal'
 
     def get_price(self):
@@ -215,7 +215,7 @@ class ExtraService(Service):
             'service_price': self.get_price()
         }
 
-# FIXME Make strategies stateless too
+
 class BillingStrategy:
     def get_base_bill(self, services: List[Service]):
         bill_value = 0.0
@@ -227,7 +227,7 @@ class BillingStrategy:
     def get_multiplier(self):
         return 1.0
 
-    def get_final_bill(self, services: List[Service]):
+    def get_bill(self, services: List[Service]):
         return self.get_base_bill(services) * self.get_multiplier()
 
 
@@ -237,7 +237,7 @@ class HolidaySeasonStrategy(BillingStrategy):
     def get_multiplier(self):
         return self.__MULTIPLIER
 
-    def get_final_bill(self, services: List[Service]):
+    def get_bill(self, services: List[Service]):
         return super().get_base_bill(services) * self.get_multiplier()
 
 
@@ -247,7 +247,7 @@ class JuneSeasonStrategy(BillingStrategy):
     def get_multiplier(self):
         return self.__MULTIPLIER
 
-    def get_final_bill(self, services: List[Service]):
+    def get_bill(self, services: List[Service]):
         return super().get_base_bill(services) * self.get_multiplier()
 
 
@@ -257,7 +257,7 @@ class JuneHighSeasonStrategy(BillingStrategy):
     def get_multiplier(self):
         return self.__MULTIPLIER
 
-    def get_final_bill(self, services: List[Service]):
+    def get_bill(self, services: List[Service]):
         return super().get_base_bill(services) * self.get_multiplier()
 
 
@@ -267,7 +267,7 @@ class LowSeasonStrategy(BillingStrategy):
     def get_multiplier(self):
         return self.__MULTIPLIER
 
-    def get_final_bill(self, services: List[Service]):
+    def get_bill(self, services: List[Service]):
         return super().get_base_bill(services) * self.get_multiplier()
 
 
@@ -304,5 +304,5 @@ class Contract:
             'services': list(map(lambda s: s.to_json(), self.services)),
             'services_price': self.billing_strategy.get_base_bill(self.services),
             'price_multiplier': self.billing_strategy.get_multiplier(),
-            'total_price': self.billing_strategy.get_final_bill(self.services)
+            'total_price': self.billing_strategy.get_bill(self.services)
         }
