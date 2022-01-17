@@ -138,7 +138,11 @@ class Storage:
 
         cursor.execute(query, params)
         connection.commit()
+
+        affected_rows = cursor.rowcount
         cursor.close()
+
+        return affected_rows > 0
 
     @staticmethod
     def guest_edit(id: int, name: str, social_number: str, birthdate: str, phone_number: str,
@@ -169,7 +173,11 @@ class Storage:
 
         cursor.execute(query, params)
         connection.commit()
+
+        affected_rows = cursor.rowcount
         cursor.close()
+
+        return affected_rows > 0
 
     # Contract methods
 
@@ -294,9 +302,12 @@ class Storage:
                  'where id = %s')
         params = (guest_id, checkin_time, contracted_days, card_number, is_open, contract_id)
         cursor.execute(query, params)
-
         connection.commit()
+
+        affected_rows = cursor.rowcount
         cursor.close()
+
+        return affected_rows > 0
 
     @staticmethod
     def contract_delete(contract_id: str):
@@ -306,9 +317,12 @@ class Storage:
                  'where id = %s')
         params = tuple([contract_id])
         cursor.execute(query, params)
-
         connection.commit()
+
+        affected_rows = cursor.rowcount
         cursor.close()
+
+        return affected_rows > 0
 
     # Service methods
 
@@ -338,8 +352,10 @@ class Storage:
                  'inner join car_rental cr '
                  'inner join product p '
                  'on s.id = cr.service_id '
-                 'and cr.product_id = p.id')
-        cursor.execute(query)
+                 'and cr.product_id = p.id '
+                 'where s.contract_id = %s')
+        params = tuple([contract_id])
+        cursor.execute(query, params)
 
         for entry in cursor:
             products = [Storage.__get_product_id(entry['product_id'])]
@@ -357,8 +373,10 @@ class Storage:
                  'inner join babysitter b '
                  'inner join product p '
                  'on s.id = b.service_id '
-                 'and b.product_id = p.id')
-        cursor.execute(query)
+                 'and b.product_id = p.id '
+                 'where s.contract_id = %s')
+        params = tuple([contract_id])
+        cursor.execute(query, params)
 
         for entry in cursor:
             product = Product(entry['product_id'], entry['name'], float(entry['price']), entry['quantity'])
@@ -369,8 +387,10 @@ class Storage:
 
         query = ('select * from service s '
                  'inner join meal m '
-                 'on s.id = m.service_id')
-        cursor.execute(query)
+                 'on s.id = m.service_id '
+                 'where s.contract_id = %s')
+        params = tuple([contract_id])
+        cursor.execute(query, params)
 
         for entry in cursor:
             service = Meal(entry['service_id'], float(entry['unit_price']), entry['description'])
@@ -380,8 +400,10 @@ class Storage:
 
         query = ('select * from service s '
                  'inner join penalty_fee p '
-                 'on s.id = p.service_id')
-        cursor.execute(query)
+                 'on s.id = p.service_id '
+                 'where s.contract_id = %s')
+        params = tuple([contract_id])
+        cursor.execute(query, params)
 
         for entry in cursor:
             service = PenaltyFee(entry['service_id'], float(entry['unit_price']), entry['description'],
@@ -392,8 +414,10 @@ class Storage:
 
         query = ('select * from service s '
                  'inner join extra_service e '
-                 'on s.id = e.service_id')
-        cursor.execute(query)
+                 'on s.id = e.service_id '
+                 'where s.contract_id = %s')
+        params = tuple([contract_id])
+        cursor.execute(query, params)
 
         for entry in cursor:
             service = ExtraService(entry['service_id'], float(entry['unit_price']), entry['description'])
@@ -405,15 +429,15 @@ class Storage:
         return services
 
     @staticmethod
-    def service_get_byid(service_id: int):
+    def service_get_byid(contract_id: int, service_id: int):
         cursor = connection.cursor(buffered=True, dictionary=True)
         service_type = ''
         service = None
 
         query = ('select * '
                  'from service '
-                 'where id = %s')
-        params = tuple([service_id])
+                 'where id = %s and contract_id = %s')
+        params = (service_id, contract_id)
         cursor.execute(query, params)
         for entry in cursor:
             service_type = entry['service_type']
@@ -674,11 +698,12 @@ class Storage:
                  'where service_id = %s')
         params = (product_id, days, additional_bed, service_id)
         cursor.execute(query, params)
-
         connection.commit()
+
+        affected_rows = cursor.rowcount
         cursor.close()
 
-        return service_id
+        return affected_rows > 0
 
     @staticmethod
     def service_edit_car(service_id: int, rental_type: str, car_plate: str, full_gas: bool,
@@ -696,11 +721,12 @@ class Storage:
                  'where service_id = %s')
         params = (product_id, days, car_plate, full_gas, car_insurance, service_id)
         cursor.execute(query, params)
-
         connection.commit()
+
+        affected_rows = cursor.rowcount
         cursor.close()
 
-        return service_id
+        return affected_rows > 0
 
     @staticmethod
     def service_edit_babysitter(service_id: int, normal_hours: int, extra_hours: int):
@@ -715,9 +741,12 @@ class Storage:
                  'where service_id = %s')
         params = (product_id, normal_hours, extra_hours, service_id)
         cursor.execute(query, params)
-
         connection.commit()
+
+        affected_rows = cursor.rowcount
         cursor.close()
+
+        return affected_rows > 0
 
     @staticmethod
     def service_edit_meal(service_id: int, unit_price: float, description: str):
@@ -729,9 +758,12 @@ class Storage:
                  'where service_id = %s')
         params = (unit_price, description, service_id)
         cursor.execute(query, params)
-
         connection.commit()
+
+        affected_rows = cursor.rowcount
         cursor.close()
+
+        return affected_rows > 0
 
     @staticmethod
     def service_edit_penalty_fee(service_id: int, unit_price: float, description: str,
@@ -745,9 +777,12 @@ class Storage:
                  'where service_id = %s')
         params = (unit_price, description, penalties, service_id)
         cursor.execute(query, params)
-
         connection.commit()
+
+        affected_rows = cursor.rowcount
         cursor.close()
+
+        return affected_rows > 0
 
     @staticmethod
     def service_edit_extra(service_id: int, unit_price: float, description: str):
@@ -759,9 +794,12 @@ class Storage:
                  'where service_id = %s')
         params = (unit_price, description, service_id)
         cursor.execute(query, params)
-
         connection.commit()
+
+        affected_rows = cursor.rowcount
         cursor.close()
+
+        return affected_rows > 0
 
     @staticmethod
     def service_delete(service_id: int):
@@ -771,9 +809,12 @@ class Storage:
                  'where id = %s')
         params = tuple([service_id])
         cursor.execute(query, params)
-
         connection.commit()
+
+        affected_rows = cursor.rowcount
         cursor.close()
+
+        return affected_rows > 0
 
     # Room methods
 
@@ -806,9 +847,12 @@ class Storage:
                  'where id = %s')
         params = tuple([product_id])
         cursor.execute(query, params)
-
         connection.commit()
+
+        affected_rows = cursor.rowcount
         cursor.close()
+
+        return affected_rows > 0
 
     @staticmethod
     def room_unbook(product_id: int):
@@ -819,9 +863,12 @@ class Storage:
                  'where id = %s')
         params = tuple([product_id])
         cursor.execute(query, params)
-
         connection.commit()
+
+        affected_rows = cursor.rowcount
         cursor.close()
+
+        return affected_rows > 0
 
     # Review methods
 
@@ -834,7 +881,7 @@ class Storage:
                  'where id = %s')
         params = tuple([contract_id])
         cursor.execute(query, params)
-        review_id = cursor.fetchone()['review_id']
+        review_id = cursor.fetchone().get('review_id')
         connection.commit()
 
         query = ('select * '
@@ -855,25 +902,40 @@ class Storage:
 
     @staticmethod
     def review_add(contract_id: int, rating: int, comment: str):
-        cursor = connection.cursor()
+        review_id = -1
 
-        query = ('insert into review '
-                 '(rating, comment) '
-                 'values (%s, %s)')
-        params = (rating, comment)
-        cursor.execute(query, params)
+        cursor = connection.cursor(buffered=True)
 
-        connection.commit()
-        review_id = cursor.lastrowid
-
-        query = ('update contract set '
-                 'review_id = %s '
+        query = ('select * '
+                 'from contract '
                  'where id = %s')
-        params = (review_id, contract_id)
+        params = tuple([contract_id])
         cursor.execute(query, params)
 
         connection.commit()
+        contract_exists = cursor.rowcount > 0
+        cursor.fetchall()
         cursor.close()
+
+        if contract_exists:
+            cursor = connection.cursor()
+            query = ('insert into review '
+                     '(rating, comment) '
+                     'values (%s, %s)')
+            params = (rating, comment)
+            cursor.execute(query, params)
+
+            connection.commit()
+            review_id = cursor.lastrowid
+
+            query = ('update contract set '
+                     'review_id = %s '
+                     'where id = %s')
+            params = (review_id, contract_id)
+            cursor.execute(query, params)
+
+            connection.commit()
+            cursor.close()
 
         return review_id
 
@@ -886,7 +948,7 @@ class Storage:
                  'where id = %s')
         params = tuple([contract_id])
         cursor.execute(query, params)
-        review_id = cursor.fetchone()['review_id']
+        review_id = cursor.fetchone().get('review_id')
         connection.commit()
 
         query = ('update review set '
@@ -895,9 +957,12 @@ class Storage:
                  'where id = %s')
         params = (rating, comment, review_id)
         cursor.execute(query, params)
-
         connection.commit()
+
+        affected_rows = cursor.rowcount
         cursor.close()
+
+        return affected_rows > 0
 
     @staticmethod
     def review_delete(contract_id: int):
@@ -908,13 +973,16 @@ class Storage:
                  'where id = %s')
         params = tuple([contract_id])
         cursor.execute(query, params)
-        review_id = cursor.fetchone()['review_id']
+        review_id = cursor.fetchone().get('review_id')
         connection.commit()
 
         query = ('delete from review '
                  'where id = %s')
         params = tuple([review_id])
         cursor.execute(query, params)
-
         connection.commit()
+
+        affected_rows = cursor.rowcount
         cursor.close()
+
+        return affected_rows > 0
