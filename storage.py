@@ -1,7 +1,7 @@
 # coding: utf-8
 import configparser
-import mysql.connector as database
 
+from mysql.connector.pooling import MySQLConnectionPool
 from models import *
 
 db_config = configparser.ConfigParser()
@@ -10,8 +10,7 @@ db_config.read(r'database.cfg')
 config = dict(db_config.items('riviera'))
 config['port'] = int(config['port'])
 
-# FIXME: When to close connection?
-connection = database.connect(**config)
+connection_pool = MySQLConnectionPool(pool_name='dbpool', pool_size=8, **config)
 
 
 class Storage:
@@ -20,6 +19,7 @@ class Storage:
 
     @staticmethod
     def __get_product(name: str):
+        connection = connection_pool.get_connection()
         cursor = connection.cursor(buffered=True, dictionary=True)
         product = None
 
@@ -35,11 +35,13 @@ class Storage:
 
         connection.commit()
         cursor.close()
+        connection.close()
 
         return product
 
     @staticmethod
     def __get_product_id(id: int):
+        connection = connection_pool.get_connection()
         cursor = connection.cursor(buffered=True, dictionary=True)
         product = None
 
@@ -55,6 +57,7 @@ class Storage:
 
         connection.commit()
         cursor.close()
+        connection.close()
 
         return product
 
@@ -75,6 +78,7 @@ class Storage:
 
     @staticmethod
     def guest_get_all():
+        connection = connection_pool.get_connection()
         cursor = connection.cursor(buffered=True, dictionary=True)
         data = []
 
@@ -93,10 +97,13 @@ class Storage:
                 data.append(guest)
 
         cursor.close()
+        connection.close()
+
         return data
 
     @staticmethod
     def guest_get_byid(guest_id: int):
+        connection = connection_pool.get_connection()
         cursor = connection.cursor(buffered=True, dictionary=True)
         guest = None
 
@@ -116,6 +123,7 @@ class Storage:
                               entry['birth_date'], entry['phone_number'], address)
 
         cursor.close()
+        connection.close()
         return guest
 
     @staticmethod
@@ -124,6 +132,7 @@ class Storage:
                   address_neighborhood: str, address_zipcode: str, address_city: str,
                   address_state: str, address_country: str):
 
+        connection = connection_pool.get_connection()
         cursor = connection.cursor()
 
         query = ('insert into guest '
@@ -141,6 +150,7 @@ class Storage:
 
         affected_rows = cursor.rowcount
         cursor.close()
+        connection.close()
 
         return affected_rows > 0
 
@@ -150,6 +160,7 @@ class Storage:
                    address_neighborhood: str, address_zipcode: str, address_city: str,
                    address_state: str, address_country: str):
 
+        connection = connection_pool.get_connection()
         cursor = connection.cursor()
 
         query = ('update guest '
@@ -176,6 +187,7 @@ class Storage:
 
         affected_rows = cursor.rowcount
         cursor.close()
+        connection.close()
 
         return affected_rows > 0
 
@@ -183,6 +195,7 @@ class Storage:
 
     @staticmethod
     def contract_get_all():
+        connection = connection_pool.get_connection()
         cursor = connection.cursor(buffered=True, dictionary=True)
         contracts = []
 
@@ -222,11 +235,13 @@ class Storage:
 
         connection.commit()
         cursor.close()
+        connection.close()
 
         return contracts
 
     @staticmethod
     def contract_get_byid(contract_id: int):
+        connection = connection_pool.get_connection()
         cursor = connection.cursor(buffered=True, dictionary=True)
         contract = None
 
@@ -267,11 +282,13 @@ class Storage:
 
         connection.commit()
         cursor.close()
+        connection.close()
         return contract
 
     @staticmethod
     def contract_add(guest_id: int, card_number: str, checkin_time: str, contracted_days: int,
                      billing_strategy_id: int):
+        connection = connection_pool.get_connection()
         cursor = connection.cursor()
 
         query = ('insert into contract '
@@ -285,12 +302,14 @@ class Storage:
         id = cursor.lastrowid
 
         cursor.close()
+        connection.close()
 
         return id
 
     @staticmethod
     def contract_edit(contract_id: int, guest_id: int, card_number: str, checkin_time: str, contracted_days: int,
                       is_open: bool):
+        connection = connection_pool.get_connection()
         cursor = connection.cursor()
 
         query = ('update contract '
@@ -306,11 +325,13 @@ class Storage:
 
         affected_rows = cursor.rowcount
         cursor.close()
+        connection.close()
 
         return affected_rows > 0
 
     @staticmethod
     def contract_delete(contract_id: str):
+        connection = connection_pool.get_connection()
         cursor = connection.cursor()
 
         query = ('delete from contract '
@@ -321,6 +342,7 @@ class Storage:
 
         affected_rows = cursor.rowcount
         cursor.close()
+        connection.close()
 
         return affected_rows > 0
 
@@ -328,6 +350,7 @@ class Storage:
 
     @staticmethod
     def service_get_all(contract_id: int):
+        connection = connection_pool.get_connection()
         cursor = connection.cursor(buffered=True, dictionary=True)
         services = []
 
@@ -426,10 +449,12 @@ class Storage:
         connection.commit()
 
         cursor.close()
+        connection.close()
         return services
 
     @staticmethod
     def service_get_byid(contract_id: int, service_id: int):
+        connection = connection_pool.get_connection()
         cursor = connection.cursor(buffered=True, dictionary=True)
         service_type = ''
         service = None
@@ -532,10 +557,12 @@ class Storage:
             connection.commit()
 
         cursor.close()
+        connection.close()
         return service
 
     @staticmethod
     def service_add_room(contract_id: str, rental_type: str, additional_bed: bool, days: int):
+        connection = connection_pool.get_connection()
         cursor = connection.cursor()
 
         query = ('insert into service '
@@ -557,12 +584,14 @@ class Storage:
 
         connection.commit()
         cursor.close()
+        connection.close()
 
         return service_id
 
     @staticmethod
     def service_add_car(contract_id: int, rental_type: str, car_plate: str, full_gas: bool, car_insurance: bool,
                         days: int):
+        connection = connection_pool.get_connection()
         cursor = connection.cursor()
 
         query = ('insert into service '
@@ -584,11 +613,13 @@ class Storage:
 
         connection.commit()
         cursor.close()
+        connection.close()
 
         return service_id
 
     @staticmethod
     def service_add_babysitter(contract_id: int, normal_hours: int, extra_hours: int):
+        connection = connection_pool.get_connection()
         cursor = connection.cursor()
 
         query = ('insert into service '
@@ -610,11 +641,13 @@ class Storage:
 
         connection.commit()
         cursor.close()
+        connection.close()
 
         return service_id
 
     @staticmethod
     def service_add_meal(contract_id: int, unit_price: float, description: str):
+        connection = connection_pool.get_connection()
         cursor = connection.cursor()
 
         query = ('insert into service '
@@ -634,11 +667,13 @@ class Storage:
 
         connection.commit()
         cursor.close()
+        connection.close()
 
         return service_id
 
     @staticmethod
     def service_add_penalty_fee(contract_id: int, unit_price: float, description: str, penalties: int):
+        connection = connection_pool.get_connection()
         cursor = connection.cursor()
 
         query = ('insert into service '
@@ -658,11 +693,13 @@ class Storage:
 
         connection.commit()
         cursor.close()
+        connection.close()
 
         return service_id
 
     @staticmethod
     def service_add_extra(contract_id: int, unit_price: float, description: str):
+        connection = connection_pool.get_connection()
         cursor = connection.cursor()
 
         query = ('insert into service '
@@ -682,11 +719,13 @@ class Storage:
 
         connection.commit()
         cursor.close()
+        connection.close()
 
         return service_id
 
     @staticmethod
     def service_edit_room(service_id: int, rental_type: str, additional_bed: bool, days: int):
+        connection = connection_pool.get_connection()
         cursor = connection.cursor()
 
         product_id = Storage.__get_product(rental_type).id
@@ -702,12 +741,14 @@ class Storage:
 
         affected_rows = cursor.rowcount
         cursor.close()
+        connection.close()
 
         return affected_rows > 0
 
     @staticmethod
     def service_edit_car(service_id: int, rental_type: str, car_plate: str, full_gas: bool,
                          car_insurance: bool, days: int):
+        connection = connection_pool.get_connection()
         cursor = connection.cursor()
 
         product_id = Storage.__get_product(rental_type).id
@@ -725,11 +766,13 @@ class Storage:
 
         affected_rows = cursor.rowcount
         cursor.close()
+        connection.close()
 
         return affected_rows > 0
 
     @staticmethod
     def service_edit_babysitter(service_id: int, normal_hours: int, extra_hours: int):
+        connection = connection_pool.get_connection()
         cursor = connection.cursor()
 
         product_id = Storage.__get_product('babysitter').id
@@ -745,11 +788,13 @@ class Storage:
 
         affected_rows = cursor.rowcount
         cursor.close()
+        connection.close()
 
         return affected_rows > 0
 
     @staticmethod
     def service_edit_meal(service_id: int, unit_price: float, description: str):
+        connection = connection_pool.get_connection()
         cursor = connection.cursor()
 
         query = ('update meal '
@@ -762,12 +807,14 @@ class Storage:
 
         affected_rows = cursor.rowcount
         cursor.close()
+        connection.close()
 
         return affected_rows > 0
 
     @staticmethod
     def service_edit_penalty_fee(service_id: int, unit_price: float, description: str,
                                  penalties: int):
+        connection = connection_pool.get_connection()
         cursor = connection.cursor()
 
         query = ('update penalty_fee '
@@ -781,11 +828,13 @@ class Storage:
 
         affected_rows = cursor.rowcount
         cursor.close()
+        connection.close()
 
         return affected_rows > 0
 
     @staticmethod
     def service_edit_extra(service_id: int, unit_price: float, description: str):
+        connection = connection_pool.get_connection()
         cursor = connection.cursor()
 
         query = ('update extra_service '
@@ -798,11 +847,13 @@ class Storage:
 
         affected_rows = cursor.rowcount
         cursor.close()
+        connection.close()
 
         return affected_rows > 0
 
     @staticmethod
     def service_delete(service_id: int):
+        connection = connection_pool.get_connection()
         cursor = connection.cursor()
 
         query = ('delete from service '
@@ -813,6 +864,7 @@ class Storage:
 
         affected_rows = cursor.rowcount
         cursor.close()
+        connection.close()
 
         return affected_rows > 0
 
@@ -820,6 +872,7 @@ class Storage:
 
     @staticmethod
     def room_get_all():
+        connection = connection_pool.get_connection()
         cursor = connection.cursor(buffered=True, dictionary=True)
         rooms = []
 
@@ -835,11 +888,13 @@ class Storage:
 
         connection.commit()
         cursor.close()
+        connection.close()
 
         return rooms
 
     @staticmethod
     def room_book(product_id: int):
+        connection = connection_pool.get_connection()
         cursor = connection.cursor()
 
         query = ('update product set '
@@ -851,11 +906,13 @@ class Storage:
 
         affected_rows = cursor.rowcount
         cursor.close()
+        connection.close()
 
         return affected_rows > 0
 
     @staticmethod
     def room_unbook(product_id: int):
+        connection = connection_pool.get_connection()
         cursor = connection.cursor()
 
         query = ('update product set '
@@ -867,6 +924,7 @@ class Storage:
 
         affected_rows = cursor.rowcount
         cursor.close()
+        connection.close()
 
         return affected_rows > 0
 
@@ -874,6 +932,7 @@ class Storage:
 
     @staticmethod
     def review_get(contract_id: int):
+        connection = connection_pool.get_connection()
         cursor = connection.cursor(buffered=True, dictionary=True)
 
         query = ('select review_id '
@@ -897,14 +956,16 @@ class Storage:
 
         connection.commit()
         cursor.close()
+        connection.close()
 
         return review
 
     @staticmethod
     def review_add(contract_id: int, rating: int, comment: str):
-        review_id = -1
-
+        connection = connection_pool.get_connection()
         cursor = connection.cursor(buffered=True)
+
+        review_id = -1
 
         query = ('select * '
                  'from contract '
@@ -936,11 +997,13 @@ class Storage:
 
             connection.commit()
             cursor.close()
+            connection.close()
 
         return review_id
 
     @staticmethod
     def review_edit(contract_id: int, rating: int, comment: str):
+        connection = connection_pool.get_connection()
         cursor = connection.cursor(buffered=True, dictionary=True)
 
         query = ('select review_id '
@@ -961,11 +1024,13 @@ class Storage:
 
         affected_rows = cursor.rowcount
         cursor.close()
+        connection.close()
 
         return affected_rows > 0
 
     @staticmethod
     def review_delete(contract_id: int):
+        connection = connection_pool.get_connection()
         cursor = connection.cursor(buffered=True, dictionary=True)
 
         query = ('select review_id '
@@ -984,5 +1049,6 @@ class Storage:
 
         affected_rows = cursor.rowcount
         cursor.close()
+        connection.close()
 
         return affected_rows > 0
